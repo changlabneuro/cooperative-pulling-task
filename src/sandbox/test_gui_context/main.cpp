@@ -12,6 +12,7 @@ struct SerialData {
 
 struct App {
   SerialData serial_data;
+  om::LeverContext lever_context;
   bool had_serial_connect_error{};
 };
 
@@ -23,10 +24,12 @@ void render_gui(App& app) {
 
   for (int i = 0; i < int(app.serial_data.ports.size()); i++) {
     const auto& port = app.serial_data.ports[i];
-    ImGui::Text("%s", port.port.c_str());
+    ImGui::Text("%s (%s)", port.port.c_str(), port.description.c_str());
+
     if (!om::is_open(app.serial_data.context)) {
       std::string button_label{"Connect"};
       button_label += std::to_string(i);
+
       if (ImGui::Button(button_label.c_str())) {
         auto serial_res = om::make_context(
           port.port, om::default_baud_rate(), om::default_read_write_timeout());
@@ -47,10 +50,24 @@ void render_gui(App& app) {
   }
 
   if (om::is_open(app.serial_data.context)) {
+#if 1
     if (auto state = om::read_state(app.serial_data.context)) {
       auto str_state = om::to_string(state.value());
       ImGui::Text("%s", str_state.c_str());
+    } else {
+      ImGui::Text("Failed to read state.");
     }
+#endif
+#if 1
+    ImGui::SliderInt("Force", &app.lever_context.commanded_force_grams, 1, 20);
+    auto resp = om::set_force_grams(
+      app.serial_data.context, app.lever_context.commanded_force_grams);
+    if (resp) {
+      ImGui::Text("Force response: %s", resp.value().c_str());
+    } else {
+      ImGui::Text("Failed to read force response");
+    }
+#endif
 
     if (ImGui::Button("Terminate serial context")) {
       app.serial_data.context = {};
@@ -61,7 +78,7 @@ void render_gui(App& app) {
 }
 
 int main(int, char**) {
-  App app;
+  auto app = std::make_unique<App>();
 
   if (!om::initialize_glfw()) {
     printf("Failed to initialize glfw.\n");
@@ -106,7 +123,7 @@ int main(int, char**) {
                    clear_color.z * clear_color.w, clear_color.w);
       glClear(GL_COLOR_BUFFER_BIT);
 
-      render_gui(app);
+      render_gui(*app);
 
       om::render(&imgui_context);
       glfwSwapBuffers(gui_win.window);

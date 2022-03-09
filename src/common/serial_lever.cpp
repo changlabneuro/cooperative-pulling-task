@@ -51,4 +51,12 @@ std::optional<LeverState> read_state(const SerialContext& context) {
   }
 }
 
+std::optional<std::string> set_force_grams(const SerialContext& context, int force) {
+  std::string command{"g"};
+  command += std::to_string(force);
+  command += "\n";
+  context.instance->write(command);
+  return readline(context);
+}
+
 }

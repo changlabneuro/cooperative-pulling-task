@@ -12,6 +12,7 @@ struct SerialContext {
 
 struct PortDescriptor {
   std::string port;
+  std::string description;
 };
 
 std::optional<SerialContext> make_context(const std::string& port, uint32_t baud, uint32_t timeout);

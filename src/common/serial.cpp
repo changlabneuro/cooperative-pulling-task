@@ -8,6 +8,7 @@ std::vector<PortDescriptor> enumerate_ports() {
   for (auto& port : serial::list_ports()) {
     PortDescriptor desc{};
     desc.port = port.port;
+    desc.description = port.description;
     result.push_back(std::move(desc));
   }
   return result;
