@@ -1,0 +1,4 @@
+add_subdirectory(test_serial)
+add_subdirectory(test_context)
+add_subdirectory(test_gui)
+add_subdirectory(test_gui_context)
