@@ -7,7 +7,7 @@
 namespace om {
 
 struct SerialContext {
-  std::unique_ptr<serial::Serial> instance;
+  std::unique_ptr<serial::Serial> instance{};
 };
 
 struct PortDescriptor {

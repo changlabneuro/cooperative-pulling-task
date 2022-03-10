@@ -6,6 +6,17 @@ namespace om {
 
 namespace {
 
+std::optional<int> parse_force(const std::string& s) {
+  constexpr const char* tg = "target grams: ";
+  auto tg_it = s.find(tg);
+  if (tg_it == std::string::npos) {
+    return std::nullopt;
+  } else {
+    char* ignore;
+    return std::strtol(s.data() + tg_it + std::strlen(tg), &ignore, 10);
+  }
+}
+
 std::optional<LeverState> parse_state(const std::string& s) {
 #if 0
   printf("Source: %s\n", s.c_str());
@@ -51,12 +62,16 @@ std::optional<LeverState> read_state(const SerialContext& context) {
   }
 }
 
-std::optional<std::string> set_force_grams(const SerialContext& context, int force) {
+std::optional<int> set_force_grams(const SerialContext& context, int force) {
   std::string command{"g"};
   command += std::to_string(force);
   command += "\n";
   context.instance->write(command);
-  return readline(context);
+  if (auto res = readline(context)) {
+    return parse_force(res.value());
+  } else {
+    return std::nullopt;
+  }
 }
 
 }

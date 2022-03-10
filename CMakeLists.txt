@@ -28,10 +28,15 @@ target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/serial.cpp
         ${CMAKE_SOURCE_DIR}/src/common/serial_lever.hpp
         ${CMAKE_SOURCE_DIR}/src/common/serial_lever.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/lever_system.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/lever_system.cpp
         ${CMAKE_SOURCE_DIR}/src/common/glfw.hpp
         ${CMAKE_SOURCE_DIR}/src/common/glfw.cpp
         ${CMAKE_SOURCE_DIR}/src/common/imgui.hpp
         ${CMAKE_SOURCE_DIR}/src/common/imgui.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/identifier.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/ringbuffer.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/handshake.hpp
 
         #   GLAD
         ${CMAKE_SOURCE_DIR}/deps/glad/src/glad.c

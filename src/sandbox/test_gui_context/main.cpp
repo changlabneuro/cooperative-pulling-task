@@ -1,77 +1,55 @@
 #include "common/imgui.hpp"
 #include "common/glfw.hpp"
 #include "common/serial_lever.hpp"
+#include "common/lever_system.hpp"
 #include <imgui.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-struct SerialData {
-  std::vector<om::PortDescriptor> ports;
-  om::SerialContext context;
-};
-
 struct App {
-  SerialData serial_data;
-  om::LeverContext lever_context;
-  bool had_serial_connect_error{};
+  std::vector<om::PortDescriptor> ports;
+  om::lever::LeverSystem lever_system;
+  om::lever::SerialLeverHandle lever0;
 };
 
 void render_gui(App& app) {
   ImGui::Begin("GUI");
   if (ImGui::Button("Refresh ports")) {
-    app.serial_data.ports = om::enumerate_ports();
+    app.ports = om::enumerate_ports();
   }
 
-  for (int i = 0; i < int(app.serial_data.ports.size()); i++) {
-    const auto& port = app.serial_data.ports[i];
+  for (int i = 0; i < int(app.ports.size()); i++) {
+    const auto& port = app.ports[i];
     ImGui::Text("%s (%s)", port.port.c_str(), port.description.c_str());
 
-    if (!om::is_open(app.serial_data.context)) {
-      std::string button_label{"Connect"};
-      button_label += std::to_string(i);
+    std::string button_label{"Connect"};
+    button_label += std::to_string(i);
 
-      if (ImGui::Button(button_label.c_str())) {
-        auto serial_res = om::make_context(
-          port.port, om::default_baud_rate(), om::default_read_write_timeout());
-        if (serial_res) {
-          app.serial_data.context = std::move(serial_res.value());
-        } else {
-          app.had_serial_connect_error = true;
-        }
-      }
+    if (ImGui::Button(button_label.c_str())) {
+      om::lever::open_connection(&app.lever_system, app.lever0, port.port);
     }
   }
 
-  if (app.had_serial_connect_error) {
-    ImGui::Text("Failed to connect.");
-    if (ImGui::Button("Clear error")) {
-      app.had_serial_connect_error = false;
-    }
+  if (auto state = om::lever::get_state(&app.lever_system, app.lever0)) {
+    auto str_state = om::to_string(state.value());
+    ImGui::Text("%s", str_state.c_str());
+  } else {
+    ImGui::Text("Invalid state.");
+  }
+  if (auto force = om::lever::get_canonical_force(&app.lever_system, app.lever0)) {
+    ImGui::Text("Canonical force: %d", force.value());
+  } else {
+    ImGui::Text("Invalid force.");
   }
 
-  if (om::is_open(app.serial_data.context)) {
-#if 1
-    if (auto state = om::read_state(app.serial_data.context)) {
-      auto str_state = om::to_string(state.value());
-      ImGui::Text("%s", str_state.c_str());
-    } else {
-      ImGui::Text("Failed to read state.");
-    }
-#endif
-#if 1
-    ImGui::SliderInt("Force", &app.lever_context.commanded_force_grams, 1, 20);
-    auto resp = om::set_force_grams(
-      app.serial_data.context, app.lever_context.commanded_force_grams);
-    if (resp) {
-      ImGui::Text("Force response: %s", resp.value().c_str());
-    } else {
-      ImGui::Text("Failed to read force response");
-    }
-#endif
+  int commanded_force = om::lever::get_commanded_force(&app.lever_system, app.lever0);
+  ImGui::SliderInt("SetForce", &commanded_force, 1, 20);
+  om::lever::set_force(&app.lever_system, app.lever0, commanded_force);
 
-    if (ImGui::Button("Terminate serial context")) {
-      app.serial_data.context = {};
-    }
+  ImGui::Text("Pending remote commands: %d", num_remote_commands(&app.lever_system));
+
+  if (ImGui::Button("Terminate serial context")) {
+    om::lever::close_connection(&app.lever_system, app.lever0);
   }
 
   ImGui::End();
@@ -109,9 +87,14 @@ int main(int, char**) {
   auto imgui_context = gui_res.value();
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+  auto levers = om::lever::initialize(&app->lever_system, 2);
+  app->lever0 = levers[0];
+
   // Main loop
   while (!glfwWindowShouldClose(gui_win.window) && !glfwWindowShouldClose(render_win.window)) {
     glfwPollEvents();
+
+    om::lever::update(&app->lever_system);
 
     {
       glfwMakeContextCurrent(gui_win.window);
@@ -139,6 +122,7 @@ int main(int, char**) {
     }
   }
 
+  om::lever::terminate(&app->lever_system);
   om::destroy_imgui_context(&imgui_context);
   om::destroy_glfw_context(&gui_win);
   om::destroy_glfw_context(&render_win);
