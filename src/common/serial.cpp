@@ -16,8 +16,15 @@ std::vector<PortDescriptor> enumerate_ports() {
 
 std::optional<SerialContext> make_context(const std::string& port, uint32_t baud, uint32_t timeout) {
   SerialContext result;
-  result.instance = std::make_unique<serial::Serial>(
-    port, baud, serial::Timeout::simpleTimeout(timeout));
+
+  try {
+    result.instance = std::make_unique<serial::Serial>(
+      port, baud, serial::Timeout::simpleTimeout(timeout));
+
+  } catch (...) {
+    printf("Failed to create instance.\n");
+    return std::nullopt;
+  }
 
   if (!result.instance->isOpen()) {
     printf("Failed to open port.\n");

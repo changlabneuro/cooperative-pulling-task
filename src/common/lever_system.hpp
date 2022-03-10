@@ -14,19 +14,27 @@ struct SerialLeverHandle {
   uint32_t id;
 };
 
-enum class LeverCommandType {
+enum class SerialLeverError {
+  None = 0,
+  FailedToOpen = 1,
+};
+
+enum class LeverMessageType {
   SetForce = 0,
   ShareState,
   OpenPort,
-  ClosePort
+  ClosePort,
+  PortStatus,
 };
 
-struct LeverCommandData {
+struct LeverMessageData {
   SerialLeverHandle handle;
-  LeverCommandType type;
+  LeverMessageType type;
   std::optional<LeverState> state;
   std::optional<int> force;
   std::string port;
+  bool is_open;
+  SerialLeverError error;
 };
 
 struct LeverSystem {
@@ -35,7 +43,8 @@ struct LeverSystem {
     std::optional<LeverState> state;
     std::optional<int> force;
     int commanded_force{};
-    bool need_send_update{};
+    bool need_send_state{};
+    std::optional<SerialLeverError> open_response;
   };
 
   struct LocalInstance {
@@ -46,7 +55,10 @@ struct LeverSystem {
     int commanded_force{};
     std::optional<int> canonical_force;
     std::optional<LeverState> state;
-    Handshake<LeverCommandData> command;
+    Handshake<LeverMessageData> message;
+
+    bool awaiting_open{};
+    bool is_open{};
   };
 
   std::thread worker_thread;
@@ -54,7 +66,7 @@ struct LeverSystem {
 
   std::vector<std::unique_ptr<LocalInstance>> local_instances;
   std::vector<std::unique_ptr<RemoteInstance>> remote_instances;
-  RingBuffer<LeverCommandData, 8> read_remote;
+  RingBuffer<LeverMessageData, 8> read_remote;
 
   uint32_t instance_id{1};
 };
@@ -69,6 +81,8 @@ inline int num_remote_commands(LeverSystem* sys) {
 
 void set_force(LeverSystem* system, SerialLeverHandle instance, int grams);
 void open_connection(LeverSystem* system, SerialLeverHandle handle, const std::string& port);
+bool is_pending_open(LeverSystem* system, SerialLeverHandle handle);
+bool is_open(LeverSystem* system, SerialLeverHandle handle);
 void close_connection(LeverSystem* system, SerialLeverHandle handle);
 
 std::optional<int> get_canonical_force(LeverSystem* system, SerialLeverHandle instance);

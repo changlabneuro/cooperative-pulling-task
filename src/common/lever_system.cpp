@@ -16,64 +16,103 @@ LeverSystem::LocalInstance* find_local_instance(LeverSystem* sys, SerialLeverHan
   return nullptr;
 }
 
-LeverCommandData make_set_force_command(int force) {
-  LeverCommandData result{};
-  result.type = lever::LeverCommandType::SetForce;
+LeverMessageData make_set_force_message(int force) {
+  LeverMessageData result{};
+  result.type = LeverMessageType::SetForce;
   result.force = force;
   return result;
 }
 
-LeverCommandData make_open_port_command(std::string&& port) {
-  LeverCommandData result{};
-  result.type = lever::LeverCommandType::OpenPort;
+LeverMessageData make_open_port_message(std::string&& port) {
+  LeverMessageData result{};
+  result.type = LeverMessageType::OpenPort;
   result.port = std::move(port);
   return result;
 }
 
-LeverCommandData make_close_port_command() {
-  LeverCommandData result{};
-  result.type = lever::LeverCommandType::ClosePort;
+LeverMessageData make_close_port_message() {
+  LeverMessageData result{};
+  result.type = LeverMessageType::ClosePort;
   return result;
 }
 
-bool process_remote_command(LeverSystem::RemoteInstance& remote, LeverCommandData&& data) {
+LeverMessageData make_port_status_message(SerialLeverHandle handle,
+                                          SerialLeverError error, bool is_open) {
+  LeverMessageData result{};
+  result.type = LeverMessageType::PortStatus;
+  result.handle = handle;
+  result.error = error;
+  result.is_open = is_open;
+  return result;
+}
+
+LeverMessageData make_share_state_message(const LeverSystem::RemoteInstance& remote,
+                                          SerialLeverHandle handle) {
+  LeverMessageData message{};
+  message.type = LeverMessageType::ShareState;
+  message.force = remote.force;
+  message.state = remote.state;
+  message.handle = handle;
+  message.is_open = is_open(remote.serial_context);
+  return message;
+}
+
+bool process_remote_message(LeverSystem::RemoteInstance& remote, LeverMessageData&& data) {
   switch (data.type) {
-    case LeverCommandType::SetForce: {
+    case LeverMessageType::SetForce: {
       remote.commanded_force = data.force.value();
-      break;
+      return false;
     }
-    case LeverCommandType::OpenPort: {
+
+    case LeverMessageType::OpenPort: {
+      assert(!remote.open_response);
       remote = {};
       auto serial_res = om::make_context(
         data.port, om::default_baud_rate(), om::default_read_write_timeout());
+#if 0
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      remote.open_response = SerialLeverError::FailedToOpen;
+#else
       if (serial_res) {
         remote.serial_context = std::move(serial_res.value());
+        remote.open_response = SerialLeverError::None;
       } else {
-        //  write error.
+        remote.open_response = SerialLeverError::FailedToOpen;
       }
+#endif
       return true;
     }
-    case LeverCommandType::ClosePort: {
+
+    case LeverMessageType::ClosePort: {
       remote = {};
       return true;
     }
+
     default: {
       assert(false);
+      return false;
     }
   }
-  return false;
 }
 
-void process_instance(LeverSystem* system, LeverSystem::RemoteInstance& remote,
-                      LeverSystem::LocalInstance& local) {
-  if (auto data = read(&local.command)) {
-    if (process_remote_command(remote, std::move(data.value()))) {
-      remote.need_send_update = true;
+void process_remote_instance(LeverSystem* system, LeverSystem::RemoteInstance& remote,
+                             LeverSystem::LocalInstance& local) {
+  if (auto data = read(&local.message)) {
+    if (process_remote_message(remote, std::move(data.value()))) {
+      remote.need_send_state = true;
     }
   }
 
-  if (is_open(remote.serial_context)) {
-    remote.need_send_update = true;
+  const bool open = is_open(remote.serial_context);
+  if (remote.open_response) {
+    auto message = make_port_status_message(local.handle, remote.open_response.value(), open);
+    if (system->read_remote.maybe_write(message)) {
+      remote.open_response = std::nullopt;
+    }
+  }
+
+  if (open) {
+    remote.need_send_state = true;
 
     if (auto resp = om::set_force_grams(remote.serial_context, remote.commanded_force)) {
       remote.force = remote.commanded_force;
@@ -88,14 +127,10 @@ void process_instance(LeverSystem* system, LeverSystem::RemoteInstance& remote,
     }
   }
 
-  if (remote.need_send_update) {
-    LeverCommandData state{};
-    state.type = LeverCommandType::ShareState;
-    state.force = remote.force;
-    state.state = remote.state;
-    state.handle = local.handle;
-    if (system->read_remote.maybe_write(state)) {
-      remote.need_send_update = false;
+  if (remote.need_send_state) {
+    auto message = make_share_state_message(remote, local.handle);
+    if (system->read_remote.maybe_write(message)) {
+      remote.need_send_state = false;
     }
   }
 }
@@ -103,9 +138,8 @@ void process_instance(LeverSystem* system, LeverSystem::RemoteInstance& remote,
 void worker(LeverSystem* system) {
   while (system->keep_processing.load()) {
     for (int i = 0; i < int(system->remote_instances.size()); i++) {
-      auto& remote = *system->remote_instances[i];
-      auto& local = *system->local_instances[i];
-      process_instance(system, remote, local);
+      process_remote_instance(
+        system, *system->remote_instances[i], *system->local_instances[i]);
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -153,24 +187,24 @@ void lever::terminate(LeverSystem* sys) {
 
 void lever::update(LeverSystem* system) {
   for (auto& inst : system->local_instances) {
-    if (inst->command.awaiting_read) {
-      (void) acknowledged(&inst->command);
+    if (inst->message.awaiting_read) {
+      (void) acknowledged(&inst->message);
     }
 
-    if (inst->pending_open_port && !inst->command.awaiting_read) {
-      auto data = make_open_port_command(std::move(inst->pending_open_port.value()));
-      publish(&inst->command, std::move(data));
+    if (inst->pending_open_port && !inst->message.awaiting_read) {
+      auto data = make_open_port_message(std::move(inst->pending_open_port.value()));
+      publish(&inst->message, std::move(data));
       inst->pending_open_port = std::nullopt;
     }
 
-    if (inst->pending_close_port && !inst->command.awaiting_read) {
-      publish(&inst->command, make_close_port_command());
+    if (inst->pending_close_port && !inst->message.awaiting_read) {
+      publish(&inst->message, make_close_port_message());
       inst->pending_close_port = false;
     }
 
-    if (inst->pending_canonical_force && !inst->command.awaiting_read) {
-      auto data = make_set_force_command(inst->pending_canonical_force.value());
-      publish(&inst->command, std::move(data));
+    if (inst->pending_canonical_force && !inst->message.awaiting_read) {
+      auto data = make_set_force_message(inst->pending_canonical_force.value());
+      publish(&inst->message, std::move(data));
       inst->pending_canonical_force = std::nullopt;
     }
   }
@@ -178,10 +212,18 @@ void lever::update(LeverSystem* system) {
   const int num_read = system->read_remote.size();
   for (int i = 0; i < num_read; i++) {
     auto response = system->read_remote.read();
-    if (response.type == LeverCommandType::ShareState) {
+    if (response.type == LeverMessageType::ShareState) {
       if (auto* inst = find_local_instance(system, response.handle)) {
         inst->canonical_force = response.force;
         inst->state = response.state;
+        inst->is_open = response.is_open;
+      }
+
+    } else if (response.type == LeverMessageType::PortStatus) {
+      if (auto* inst = find_local_instance(system, response.handle)) {
+        assert(inst->awaiting_open);
+        inst->awaiting_open = false;
+        inst->is_open = response.is_open;
       }
     }
   }
@@ -200,8 +242,27 @@ void lever::open_connection(LeverSystem* system, SerialLeverHandle handle,
                             const std::string& port) {
   if (auto* inst = find_local_instance(system, handle)) {
     inst->pending_open_port = port;
+    inst->awaiting_open = true;
   } else {
     assert(false);
+  }
+}
+
+bool lever::is_pending_open(LeverSystem* system, SerialLeverHandle handle) {
+  if (auto* inst = find_local_instance(system, handle)) {
+    return inst->awaiting_open;
+  } else {
+    assert(false);
+    return false;
+  }
+}
+
+bool lever::is_open(LeverSystem* system, SerialLeverHandle handle) {
+  if (auto* inst = find_local_instance(system, handle)) {
+    return inst->is_open;
+  } else {
+    assert(false);
+    return false;
   }
 }
 

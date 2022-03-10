@@ -9,7 +9,7 @@
 struct App {
   std::vector<om::PortDescriptor> ports;
   om::lever::LeverSystem lever_system;
-  om::lever::SerialLeverHandle lever0;
+  std::array<om::lever::SerialLeverHandle, 2> levers{};
 };
 
 void render_gui(App& app) {
@@ -18,38 +18,60 @@ void render_gui(App& app) {
     app.ports = om::enumerate_ports();
   }
 
-  for (int i = 0; i < int(app.ports.size()); i++) {
-    const auto& port = app.ports[i];
-    ImGui::Text("%s (%s)", port.port.c_str(), port.description.c_str());
+  for (int li = 0; li < int(app.levers.size()); li++) {
+    std::string tree_label{"Lever"};
+    tree_label += std::to_string(li);
+    const auto lever = app.levers[li];
 
-    std::string button_label{"Connect"};
-    button_label += std::to_string(i);
+    if (ImGui::TreeNode(tree_label.c_str())) {
+      const bool pending_open = om::lever::is_pending_open(&app.lever_system, lever);
+      const bool open = om::lever::is_open(&app.lever_system, lever);
 
-    if (ImGui::Button(button_label.c_str())) {
-      om::lever::open_connection(&app.lever_system, app.lever0, port.port);
+      if (!pending_open && !open) {
+        for (int i = 0; i < int(app.ports.size()); i++) {
+          const auto& port = app.ports[i];
+          ImGui::Text("%s (%s)", port.port.c_str(), port.description.c_str());
+
+          std::string button_label{"Connect"};
+          button_label += std::to_string(i);
+
+          if (ImGui::Button(button_label.c_str())) {
+            om::lever::open_connection(&app.lever_system, lever, port.port);
+          }
+        }
+      }
+
+      if (open) {
+        ImGui::Text("Connection is open.");
+      } else {
+        ImGui::Text("Connection is closed.");
+      }
+
+      if (auto state = om::lever::get_state(&app.lever_system, lever)) {
+        auto str_state = om::to_string(state.value());
+        ImGui::Text("%s", str_state.c_str());
+      } else {
+        ImGui::Text("Invalid state.");
+      }
+
+      if (auto force = om::lever::get_canonical_force(&app.lever_system, lever)) {
+        ImGui::Text("Canonical force: %d", force.value());
+      } else {
+        ImGui::Text("Invalid force.");
+      }
+
+      int commanded_force = om::lever::get_commanded_force(&app.lever_system, lever);
+      ImGui::SliderInt("SetForce", &commanded_force, 1, 20);
+      om::lever::set_force(&app.lever_system, lever, commanded_force);
+
+      if (open) {
+        if (ImGui::Button("Terminate serial context")) {
+          om::lever::close_connection(&app.lever_system, lever);
+        }
+      }
+
+      ImGui::TreePop();
     }
-  }
-
-  if (auto state = om::lever::get_state(&app.lever_system, app.lever0)) {
-    auto str_state = om::to_string(state.value());
-    ImGui::Text("%s", str_state.c_str());
-  } else {
-    ImGui::Text("Invalid state.");
-  }
-  if (auto force = om::lever::get_canonical_force(&app.lever_system, app.lever0)) {
-    ImGui::Text("Canonical force: %d", force.value());
-  } else {
-    ImGui::Text("Invalid force.");
-  }
-
-  int commanded_force = om::lever::get_commanded_force(&app.lever_system, app.lever0);
-  ImGui::SliderInt("SetForce", &commanded_force, 1, 20);
-  om::lever::set_force(&app.lever_system, app.lever0, commanded_force);
-
-  ImGui::Text("Pending remote commands: %d", num_remote_commands(&app.lever_system));
-
-  if (ImGui::Button("Terminate serial context")) {
-    om::lever::close_connection(&app.lever_system, app.lever0);
   }
 
   ImGui::End();
@@ -88,7 +110,8 @@ int main(int, char**) {
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
   auto levers = om::lever::initialize(&app->lever_system, 2);
-  app->lever0 = levers[0];
+  app->levers[0] = levers[0];
+  app->levers[1] = levers[1];
 
   // Main loop
   while (!glfwWindowShouldClose(gui_win.window) && !glfwWindowShouldClose(render_win.window)) {
