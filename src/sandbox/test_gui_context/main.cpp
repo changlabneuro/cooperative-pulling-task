@@ -10,12 +10,25 @@ struct App {
   std::vector<om::PortDescriptor> ports;
   om::lever::LeverSystem lever_system;
   std::array<om::lever::SerialLeverHandle, 2> levers{};
+  int lever_force_limits[2]{0, 20};
 };
 
 void render_gui(App& app) {
   ImGui::Begin("GUI");
   if (ImGui::Button("Refresh ports")) {
     app.ports = om::enumerate_ports();
+  }
+
+  auto& force_lims = app.lever_force_limits;
+  if (ImGui::InputInt2("ForceLimits", force_lims, ImGuiInputTextFlags_EnterReturnsTrue)) {
+    for (auto& lever : app.levers) {
+      int commanded_force = om::lever::get_commanded_force(&app.lever_system, lever);
+      if (commanded_force < force_lims[0]) {
+        om::lever::set_force(&app.lever_system, lever, force_lims[0]);
+      } else if (commanded_force > force_lims[1]) {
+        om::lever::set_force(&app.lever_system, lever, force_lims[1]);
+      }
+    }
   }
 
   for (int li = 0; li < int(app.levers.size()); li++) {
@@ -61,7 +74,7 @@ void render_gui(App& app) {
       }
 
       int commanded_force = om::lever::get_commanded_force(&app.lever_system, lever);
-      ImGui::SliderInt("SetForce", &commanded_force, 1, 20);
+      ImGui::SliderInt("SetForce", &commanded_force, force_lims[0], force_lims[1]);
       om::lever::set_force(&app.lever_system, lever, commanded_force);
 
       if (open) {
