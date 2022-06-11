@@ -20,6 +20,7 @@ endfunction(configure_compiler_flags)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
         src
+        deps/stb
         deps/imgui
         deps/glad/include)
 
@@ -37,6 +38,9 @@ target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/identifier.hpp
         ${CMAKE_SOURCE_DIR}/src/common/ringbuffer.hpp
         ${CMAKE_SOURCE_DIR}/src/common/handshake.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/vector.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/render.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/render.cpp
 
         #   GLAD
         ${CMAKE_SOURCE_DIR}/deps/glad/src/glad.c
