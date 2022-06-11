@@ -10,17 +10,24 @@ bool elapsed(const State* state) {
   return elapsed_time(state->t0, now()) >= state->total_time;
 }
 
+bool enter(bool* entry) {
+  if (*entry) {
+    *entry = false;
+    return true;
+  } else {
+    return false;
+  }
+}
+
 } //  anon
 
 NewTrialResult tick_new_trial(NewTrialState* state, bool* entry) {
   NewTrialResult result{};
-  if (*entry) {
+  if (enter(entry)) {
     if (state->play_sound_on_entry) {
       audio::play_buffer(state->play_sound_on_entry.value(), 0.25f);
     }
-
     state->t0 = now();
-    *entry = false;
   }
 
   gfx::draw_quad(state->stim0_color, state->stim0_size, state->stim0_offset);
@@ -33,9 +40,8 @@ NewTrialResult tick_new_trial(NewTrialState* state, bool* entry) {
 }
 
 bool tick_delay(DelayState* state, bool* entry) {
-  if (*entry) {
+  if (enter(entry)) {
     state->t0 = now();
-    *entry = false;
   }
   return elapsed(state);
 }

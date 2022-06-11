@@ -6,6 +6,7 @@
 #include <cassert>
 #include <memory>
 #include <unordered_map>
+#include <iostream>
 
 namespace om::audio {
 
@@ -43,6 +44,8 @@ namespace {
 
 struct {
   bool pa_initialized{};
+  bool pa_stream_started{};
+
   int num_output_channels{2};
   int frames_per_buffer{1024};
   double sample_rate{44.1e3};
@@ -154,22 +157,29 @@ void init_audio() {
   assert(!globals.pa_initialized);
   auto err = Pa_Initialize();
   assert(err == paNoError);
+  globals.pa_initialized = true;
 
   PaStream* stream{};
   err = Pa_OpenDefaultStream(
     &stream, 0, globals.num_output_channels,
     paFloat32, globals.sample_rate, globals.frames_per_buffer, stream_callback, nullptr);
-  assert(err == paNoError);
+  if (err != paNoError) {
+    std::cerr << "Failed to open default audio stream." << std::endl;
+    return;
+  }
+
   err = Pa_StartStream(stream);
   assert(err == paNoError);
-
-  globals.pa_initialized = true;
+  globals.pa_stream_started = true;
 }
 
 void terminate_audio() {
   if (globals.pa_initialized) {
-    Pa_StopStream(globals.stream);
-    Pa_CloseStream(globals.stream);
+    if (globals.pa_stream_started) {
+      Pa_StopStream(globals.stream);
+      Pa_CloseStream(globals.stream);
+      globals.pa_stream_started = false;
+    }
     Pa_Terminate();
     globals.pa_initialized = false;
   }
@@ -177,7 +187,7 @@ void terminate_audio() {
 
 std::optional<BufferHandle> create_buffer(const float* data, double sr, int channels, int frames) {
   assert(channels > 0 && frames > 0);
-  if (globals.push_buffers.full()) {
+  if (!globals.pa_stream_started || globals.push_buffers.full()) {
     return std::nullopt;
   }
 
@@ -226,6 +236,7 @@ std::optional<BufferHandle> read_buffer(const char* filepath) {
 }
 
 bool play_buffer(BufferHandle buff, float gain) {
+  assert(globals.pa_stream_started);
   if (globals.pending_play.full()) {
     assert(false);
     return false;
