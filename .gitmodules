@@ -10,3 +10,9 @@
 [submodule "deps/stb"]
 	path = deps/stb
 	url = https://github.com/nothings/stb
+[submodule "deps/portaudio"]
+	path = deps/portaudio
+	url = https://github.com/PortAudio/portaudio
+[submodule "deps/AudioFile"]
+	path = deps/AudioFile
+	url = https://github.com/adamstark/AudioFile

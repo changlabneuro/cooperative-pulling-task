@@ -20,11 +20,15 @@ endfunction(configure_compiler_flags)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
         src
+        deps
         deps/stb
         deps/imgui
         deps/glad/include)
 
 target_sources(${PROJECT_NAME} PUBLIC
+        ${CMAKE_SOURCE_DIR}/src/common/audio.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/audio.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/common.hpp
         ${CMAKE_SOURCE_DIR}/src/common/serial.hpp
         ${CMAKE_SOURCE_DIR}/src/common/serial.cpp
         ${CMAKE_SOURCE_DIR}/src/common/serial_lever.hpp
@@ -58,5 +62,8 @@ configure_compiler_flags(${PROJECT_NAME})
 
 add_subdirectory(src/sandbox)
 add_subdirectory(deps/glfw)
+add_subdirectory(deps/portaudio)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
+target_link_libraries(${PROJECT_NAME} PUBLIC
+        glfw
+        PortAudio)

@@ -3,6 +3,7 @@
 #include "common/serial_lever.hpp"
 #include "common/lever_system.hpp"
 #include "common/render.hpp"
+#include "common/audio.hpp"
 #include <imgui.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -12,6 +13,8 @@ struct App {
   om::lever::LeverSystem lever_system;
   std::array<om::lever::SerialLeverHandle, 2> levers{};
   int lever_force_limits[2]{0, 20};
+
+  std::optional<om::audio::BufferHandle> debug_audio_buffer;
 };
 
 void render_gui(App& app) {
@@ -88,6 +91,12 @@ void render_gui(App& app) {
     }
   }
 
+  if (app.debug_audio_buffer) {
+    if (ImGui::Button("PlaySound")) {
+      om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
+    }
+  }
+
   ImGui::End();
 }
 
@@ -129,7 +138,9 @@ int main(int, char**) {
 
   glfwMakeContextCurrent(render_win.window);
   om::gfx::init_rendering();
+  om::audio::init_audio();
 
+  app->debug_audio_buffer = om::audio::read_buffer("C:\\Users\\nick\\source\\grove\\playground\\res\\audio\\choir-c.wav");
   const char* const im_p = "C:\\Users\\nick\\source\\grove\\playground\\res\\textures\\debug\\3xyhvXg.jpeg";
   //const char* const im_p = "C:\\Users\\nick\\source\\grove\\playground\\res\\textures\\experiment\\calla_leaves.png";
   const auto im = om::gfx::read_2d_image(im_p);
@@ -173,6 +184,7 @@ int main(int, char**) {
     }
   }
 
+  om::audio::terminate_audio();
   om::gfx::terminate_rendering();
   om::lever::terminate(&app->lever_system);
   om::destroy_imgui_context(&imgui_context);
