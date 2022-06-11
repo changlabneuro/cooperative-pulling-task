@@ -47,6 +47,7 @@ target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/vector.hpp
         ${CMAKE_SOURCE_DIR}/src/common/render.hpp
         ${CMAKE_SOURCE_DIR}/src/common/render.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/time.hpp
 
         #   GLAD
         ${CMAKE_SOURCE_DIR}/deps/glad/src/glad.c

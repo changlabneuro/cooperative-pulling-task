@@ -5,6 +5,7 @@
 #include "common/render.hpp"
 #include "common/audio.hpp"
 #include "common/gui.hpp"
+#include "training.hpp"
 #include <imgui.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -47,6 +48,38 @@ void render_gui(App& app) {
   }
 
   ImGui::End();
+}
+
+void state_tick(App& app) {
+  using namespace om;
+
+  static int state{};
+  static bool entry{true};
+  static NewTrialState new_trial{};
+  static DelayState delay{};
+
+  switch (state) {
+    case 0: {
+      new_trial.play_sound_on_entry = app.debug_audio_buffer;
+      auto nt_res = tick_new_trial(&new_trial, &entry);
+      if (nt_res.finished) {
+        state = 1;
+        entry = true;
+      }
+      break;
+    }
+    case 1: {
+      delay.total_time = 2.0f;
+      if (tick_delay(&delay, &entry)) {
+        state = 0;
+        entry = true;
+      }
+      break;
+    }
+    default: {
+      assert(false);
+    }
+  }
 }
 
 int main(int, char**) {
@@ -108,11 +141,8 @@ int main(int, char**) {
       glfwMakeContextCurrent(render_win.window);
       om::update_framebuffer_dimensions(&render_win);
       om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
-      om::gfx::draw_quad(1.0f, 1.0f, 1.0f, om::Vec2f{1.0f}, om::Vec2f{});
-      om::gfx::draw_quad(1.0f, 0.0f, 1.0f, om::Vec2f{0.25f}, om::Vec2f{0.1f});
-      if (im) {
-        om::gfx::draw_2d_image(im.value(), om::Vec2f{0.25f}, om::Vec2f{});
-      }
+
+      state_tick(*app);
 
       om::gfx::submit_frame();
       assert(glGetError() == GL_NO_ERROR);

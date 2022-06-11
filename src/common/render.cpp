@@ -48,9 +48,7 @@ struct ImageDrawable {
 };
 
 struct QuadDrawable {
-  float r;
-  float g;
-  float b;
+  Vec3f color;
   Vec2f scale;
   Vec2f offset;
 };
@@ -304,7 +302,7 @@ void submit_frame() {
 
       auto color_loc = glGetUniformLocation(prog->handle, "u_color");
       assert(color_loc >= 0);
-      glUniform3f(color_loc, drawable.r, drawable.g, drawable.b);
+      glUniform3f(color_loc, drawable.color.x, drawable.color.y, drawable.color.z);
       glDrawArrays(GL_TRIANGLES, 0, 6);
     }
   }
@@ -385,11 +383,9 @@ void draw_2d_image(TextureHandle tex, const Vec2f& scale, const Vec2f& offset) {
   globals.image_drawables.push_back(drawable);
 }
 
-void draw_quad(float r, float g, float b, const Vec2f& scale, const Vec2f& offset) {
+void draw_quad(const Vec3f& color, const Vec2f& scale, const Vec2f& offset) {
   QuadDrawable drawable{};
-  drawable.r = r;
-  drawable.g = g;
-  drawable.b = b;
+  drawable.color = color;
   drawable.offset = offset;
   drawable.scale = scale;
   globals.quad_drawables.push_back(drawable);

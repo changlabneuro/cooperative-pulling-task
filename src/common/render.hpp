@@ -20,7 +20,7 @@ void submit_frame();
 
 TextureHandle create_2d_image(const void* data, int w, int h, int nc);
 void draw_2d_image(TextureHandle tex, const Vec2f& scale, const Vec2f& offset);
-void draw_quad(float r, float g, float b, const Vec2f& scale, const Vec2f& offset);
+void draw_quad(const Vec3f& color, const Vec2f& scale, const Vec2f& offset);
 
 std::unique_ptr<unsigned char[]> read_image(const char* filepath, int* w, int* h, int* nc);
 std::optional<TextureHandle> read_2d_image(const char* filepath);
