@@ -17,29 +17,38 @@ std::optional<int> parse_force(const std::string& s) {
   }
 }
 
+float parse_float(const char* base, size_t off, const char* prefix) {
+  char* ignore;
+  return std::strtof(base + off + std::strlen(prefix), &ignore);
+}
+
 std::optional<LeverState> parse_state(const std::string& s) {
 #if 0
   printf("Source: %s\n", s.c_str());
 #endif
 
+  //  see `cooperative_pulling.ino`
   const auto not_found = std::string::npos;
-  constexpr const char* sg = "strain gauge reading: ";
-  constexpr const char* cpwm = "calculated PWM: ";
-  constexpr const char* real_pwm = "acutal PWM: ";
+  constexpr const char* sg = "SG: ";
+  constexpr const char* cpwm = "CPWM: ";
+  constexpr const char* real_pwm = "APWM: ";
+  constexpr const char* pot_pin_prefix = "P: ";
 
   auto sg_it = s.find(sg);
   auto cpwm_it = s.find(cpwm);
-  auto real_pwm_it = s.find(real_pwm);  //  @NOTE: typo
+  auto real_pwm_it = s.find(real_pwm);
+  auto pot_pin_it = s.find(pot_pin_prefix);
 
-  if (sg_it == not_found || cpwm_it == not_found || real_pwm_it == not_found) {
+  if (sg_it == not_found || cpwm_it == not_found || real_pwm_it == not_found ||
+      pot_pin_it == not_found) {
     return std::nullopt;
   }
 
-  char* ignore;
   LeverState result{};
-  result.strain_gauge = std::strtof(s.data() + sg_it + std::strlen(sg), &ignore);
-  result.calculated_pwm = std::strtof(s.data() + cpwm_it + std::strlen(cpwm), &ignore);
-  result.actual_pwm = std::strtof(s.data() + real_pwm_it + std::strlen(real_pwm), &ignore);
+  result.strain_gauge = parse_float(s.data(), sg_it, sg);
+  result.calculated_pwm = parse_float(s.data(), cpwm_it, cpwm);
+  result.actual_pwm = parse_float(s.data(), real_pwm_it, real_pwm);
+  result.potentiometer_reading = parse_float(s.data(), pot_pin_it, pot_pin_prefix);
   return result;
 }
 
@@ -50,6 +59,7 @@ std::string to_string(const LeverState& state, const std::string& delim) {
   result += "strain_gauge: " + std::to_string(state.strain_gauge);
   result += delim + "calculated_pwm: " + std::to_string(state.calculated_pwm);
   result += delim + "actual_pwm: " + std::to_string(state.actual_pwm);
+  result += delim + "potent_reading: " + std::to_string(state.potentiometer_reading);
   return result;
 }
 

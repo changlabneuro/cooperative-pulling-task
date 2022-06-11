@@ -158,15 +158,17 @@ while (Serial.available() > 0) {
 
   if(incomingByte == 's') {
       current_average = myRA.getAverage();
-      Serial.print("strain gauge reading: ");
+      Serial.print("SG: ");
       Serial.print(current_average);
       Serial.print('\t');
-      Serial.print("calculated PWM: ");
+      Serial.print("CPWM: ");
       calculated_pwm = Strain_COEF[0]*pow(current_average, 6) + Strain_COEF[1]*pow(current_average, 5) + Strain_COEF[2]*pow(current_average, 4) + Strain_COEF[3]*pow(current_average, 3) + Strain_COEF[4]*pow(current_average, 2) + Strain_COEF[5]*current_average + Strain_COEF[6];
       Serial.print(calculated_pwm);
       Serial.print('\t');
-      Serial.print("acutal PWM: ");
-      Serial.println(PWM_VALUE);
+      Serial.print("APWM: ");
+      Serial.print(PWM_VALUE);
+      Serial.print("P: ");
+      Serial.println(analogRead(POT_PIN));      
   }
 
 

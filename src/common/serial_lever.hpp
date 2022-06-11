@@ -8,6 +8,7 @@ struct LeverState {
   float strain_gauge;
   float calculated_pwm;
   float actual_pwm;
+  float potentiometer_reading;
 };
 
 constexpr uint32_t default_baud_rate() {
