@@ -2,15 +2,20 @@
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <glad/glad.h>
 
 namespace om {
 
-void new_frame(ImguiContext* context) {
+void new_frame(ImguiContext* context, int fb_width, int fb_height) {
   assert(context->initialized);
   (void) context;
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
+
+  glViewport(0, 0, fb_width, fb_height);
+  glClearColor(0.45f, 0.55f, 0.6f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void render(ImguiContext* context) {

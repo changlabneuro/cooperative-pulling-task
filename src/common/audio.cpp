@@ -4,7 +4,6 @@
 #include "AudioFile/AudioFile.h"
 #include "portaudio.h"
 #include <cassert>
-#include <cmath>
 #include <memory>
 #include <unordered_map>
 
