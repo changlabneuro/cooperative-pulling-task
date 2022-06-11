@@ -7,3 +7,6 @@
 [submodule "deps/serial"]
 	path = deps/serial
 	url = https://github.com/wjwwood/serial
+[submodule "deps/stb"]
+	path = deps/stb
+	url = https://github.com/nothings/stb
