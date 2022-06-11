@@ -212,6 +212,10 @@ std::optional<BufferHandle> read_buffer(const char* filepath) {
   const int num_channels = file.getNumChannels();
   const int spc = file.getNumSamplesPerChannel();
   std::vector<float> data(num_channels * spc);
+  if (data.empty()) {
+    return std::nullopt;
+  }
+
   for (int i = 0; i < spc; i++) {
     for (int j = 0; j < num_channels; j++) {
       data[i * num_channels + j] = file.samples[j][i];
@@ -223,6 +227,7 @@ std::optional<BufferHandle> read_buffer(const char* filepath) {
 
 bool play_buffer(BufferHandle buff, float gain) {
   if (globals.pending_play.full()) {
+    assert(false);
     return false;
   } else {
     PendingPlayingBuffer pend{};

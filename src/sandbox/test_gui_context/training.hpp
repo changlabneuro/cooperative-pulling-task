@@ -8,13 +8,13 @@ namespace om {
 
 struct NewTrialState {
   TimePoint t0;
-  float total_time{30.0f};
+  float total_time{10.0f};
   Vec2f stim0_size{0.25f};
   Vec2f stim0_offset{-0.25f, 0.0f};
   Vec3f stim0_color{1.0f};
   Vec2f stim1_size{0.25f};
   Vec2f stim1_offset{0.25f, 0.0f};
-  Vec3f stim1_color{1.0f, 0.0f, 0.0f};
+  Vec3f stim1_color{1.0f};
   std::optional<audio::BufferHandle> play_sound_on_entry;
 };
 

@@ -1,10 +1,4 @@
-#include "common/imgui.hpp"
-#include "common/glfw.hpp"
-#include "common/serial_lever.hpp"
-#include "common/lever_system.hpp"
-#include "common/render.hpp"
-#include "common/audio.hpp"
-#include "common/gui.hpp"
+#include "common/om.hpp"
 #include "training.hpp"
 #include <imgui.h>
 #include <glad/glad.h>
@@ -119,10 +113,8 @@ int main(int, char**) {
   om::gfx::init_rendering();
   om::audio::init_audio();
 
-  app->debug_audio_buffer = om::audio::read_buffer("C:\\Users\\nick\\source\\grove\\playground\\res\\audio\\choir-c.wav");
-  const char* const im_p = "C:\\Users\\nick\\source\\grove\\playground\\res\\textures\\debug\\3xyhvXg.jpeg";
-  //const char* const im_p = "C:\\Users\\nick\\source\\grove\\playground\\res\\textures\\experiment\\calla_leaves.png";
-  const auto im = om::gfx::read_2d_image(im_p);
+  auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
+  app->debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
 
   while (!glfwWindowShouldClose(gui_win.window) && !glfwWindowShouldClose(render_win.window)) {
     glfwPollEvents();

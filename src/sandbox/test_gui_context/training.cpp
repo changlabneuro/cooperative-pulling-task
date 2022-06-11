@@ -3,6 +3,15 @@
 
 namespace om {
 
+namespace {
+
+template <typename State>
+bool elapsed(const State* state) {
+  return elapsed_time(state->t0, now()) >= state->total_time;
+}
+
+} //  anon
+
 NewTrialResult tick_new_trial(NewTrialState* state, bool* entry) {
   NewTrialResult result{};
   if (*entry) {
@@ -16,7 +25,7 @@ NewTrialResult tick_new_trial(NewTrialState* state, bool* entry) {
 
   gfx::draw_quad(state->stim0_color, state->stim0_size, state->stim0_offset);
   gfx::draw_quad(state->stim1_color, state->stim1_size, state->stim1_offset);
-  if (elapsed_time(state->t0, now()) >= state->total_time) {
+  if (elapsed(state)) {
     result.finished = true;
   }
 
@@ -28,7 +37,7 @@ bool tick_delay(DelayState* state, bool* entry) {
     state->t0 = now();
     *entry = false;
   }
-  return elapsed_time(state->t0, now()) >= state->total_time;
+  return elapsed(state);
 }
 
 }
