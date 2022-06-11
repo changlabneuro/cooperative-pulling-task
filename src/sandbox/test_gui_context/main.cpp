@@ -2,6 +2,7 @@
 #include "common/glfw.hpp"
 #include "common/serial_lever.hpp"
 #include "common/lever_system.hpp"
+#include "common/render.hpp"
 #include <imgui.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -126,6 +127,13 @@ int main(int, char**) {
   app->levers[0] = levers[0];
   app->levers[1] = levers[1];
 
+  glfwMakeContextCurrent(render_win.window);
+  om::gfx::init_rendering();
+
+  const char* const im_p = "C:\\Users\\nick\\source\\grove\\playground\\res\\textures\\debug\\3xyhvXg.jpeg";
+  //const char* const im_p = "C:\\Users\\nick\\source\\grove\\playground\\res\\textures\\experiment\\calla_leaves.png";
+  const auto im = om::gfx::read_2d_image(im_p);
+
   // Main loop
   while (!glfwWindowShouldClose(gui_win.window) && !glfwWindowShouldClose(render_win.window)) {
     glfwPollEvents();
@@ -151,13 +159,21 @@ int main(int, char**) {
     {
       glfwMakeContextCurrent(render_win.window);
       om::update_framebuffer_dimensions(&render_win);
-      glViewport(0, 0, render_win.framebuffer_width, render_win.framebuffer_height);
-      glClearColor(1, 0, 0, 1);
-      glClear(GL_COLOR_BUFFER_BIT);
+      om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
+      om::gfx::draw_quad(1.0f, 1.0f, 1.0f, om::Vec2f{1.0f}, om::Vec2f{});
+      om::gfx::draw_quad(1.0f, 0.0f, 1.0f, om::Vec2f{0.25f}, om::Vec2f{0.1f});
+      if (im) {
+        om::gfx::draw_2d_image(im.value(), om::Vec2f{0.25f}, om::Vec2f{});
+      }
+
+      om::gfx::submit_frame();
+      assert(glGetError() == GL_NO_ERROR);
+
       glfwSwapBuffers(render_win.window);
     }
   }
 
+  om::gfx::terminate_rendering();
   om::lever::terminate(&app->lever_system);
   om::destroy_imgui_context(&imgui_context);
   om::destroy_glfw_context(&gui_win);
