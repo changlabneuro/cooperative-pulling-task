@@ -4,10 +4,6 @@
 [submodule "deps/imgui"]
 	path = deps/imgui
 	url = https://github.com/ocornut/imgui
-[submodule "deps/serial"]
-	path = deps/serial
-	url = https://github.com/wjwwood/serial
-	ignore = dirty
 [submodule "deps/stb"]
 	path = deps/stb
 	url = https://github.com/nothings/stb
