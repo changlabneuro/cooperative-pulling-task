@@ -1,17 +1,36 @@
-#include "common/om.hpp"
+#include "common/app.hpp"
+#include "common/gui.hpp"
 #include "training.hpp"
 #include <imgui.h>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <array>
 
-struct App {
-  std::vector<om::PortDescriptor> ports;
-  std::array<om::lever::SerialLeverHandle, 2> levers{};
+struct App;
+
+void render_gui(App& app);
+void state_tick(App& app);
+void setup(App& app);
+
+struct App : public om::App {
+  ~App() override = default;
+  void setup() override {
+    ::setup(*this);
+  }
+  void gui_update() override {
+    render_gui(*this);
+  }
+  void update() override {
+    state_tick(*this);
+  }
+
   int lever_force_limits[2]{0, 20};
-
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
+  om::Vec3f stim0_color{1.0f};
+  om::Vec3f stim1_color{1.0f};
 };
+
+void setup(App& app) {
+  auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
+  app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+}
 
 void render_gui(App& app) {
   ImGui::Begin("GUI");
@@ -35,11 +54,8 @@ void render_gui(App& app) {
     app.lever_force_limits[1] = gui_res.force_limit1.value();
   }
 
-  if (app.debug_audio_buffer) {
-    if (ImGui::Button("PlaySound")) {
-      om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
-    }
-  }
+  ImGui::InputFloat3("Stim0Color", &app.stim0_color.x);
+  ImGui::InputFloat3("Stim1Color", &app.stim1_color.x);
 
   ImGui::End();
 }
@@ -55,6 +71,8 @@ void state_tick(App& app) {
   switch (state) {
     case 0: {
       new_trial.play_sound_on_entry = app.debug_audio_buffer;
+      new_trial.stim0_color = app.stim0_color;
+      new_trial.stim1_color = app.stim1_color;
       auto nt_res = tick_new_trial(&new_trial, &entry);
       if (nt_res.finished) {
         state = 1;
@@ -78,78 +96,6 @@ void state_tick(App& app) {
 
 int main(int, char**) {
   auto app = std::make_unique<App>();
-
-  if (!om::initialize_glfw()) {
-    printf("Failed to initialize glfw.\n");
-    return 0;
-  }
-
-  auto gui_win_res = om::create_glfw_context();
-  if (!gui_win_res) {
-    return 0;
-  }
-
-  auto render_win_res = om::create_glfw_context();
-  if (!render_win_res) {
-    return 0;
-  }
-
-  auto gui_win = gui_win_res.value();
-  auto render_win = render_win_res.value();
-
-  auto gui_res = om::create_imgui_context(gui_win.window);
-  if (!gui_res) {
-    om::terminate_glfw();
-    om::destroy_glfw_context(&gui_win);
-    om::destroy_glfw_context(&render_win);
-    return 0;
-  }
-  auto imgui_context = gui_res.value();
-
-  auto* lever_sys = om::lever::get_global_lever_system();
-  om::lever::initialize(lever_sys, 2, app->levers.data());
-
-  glfwMakeContextCurrent(render_win.window);
-  om::gfx::init_rendering();
-  om::audio::init_audio();
-
-  auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
-  app->debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
-
-  while (!glfwWindowShouldClose(gui_win.window) && !glfwWindowShouldClose(render_win.window)) {
-    glfwPollEvents();
-
-    om::lever::update(lever_sys);
-    {
-      glfwMakeContextCurrent(gui_win.window);
-      om::update_framebuffer_dimensions(&gui_win);
-      om::new_frame(&imgui_context, gui_win.framebuffer_width, gui_win.framebuffer_height);
-      render_gui(*app);
-      om::render(&imgui_context);
-      glfwSwapBuffers(gui_win.window);
-    }
-
-    {
-      glfwMakeContextCurrent(render_win.window);
-      om::update_framebuffer_dimensions(&render_win);
-      om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
-
-      state_tick(*app);
-
-      om::gfx::submit_frame();
-      assert(glGetError() == GL_NO_ERROR);
-
-      glfwSwapBuffers(render_win.window);
-    }
-  }
-
-  om::audio::terminate_audio();
-  om::gfx::terminate_rendering();
-  om::lever::terminate(lever_sys);
-  om::destroy_imgui_context(&imgui_context);
-  om::destroy_glfw_context(&gui_win);
-  om::destroy_glfw_context(&render_win);
-  om::terminate_glfw();
-  return 0;
+  return app->run();
 }
 

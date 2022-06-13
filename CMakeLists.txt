@@ -26,6 +26,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         deps/glad/include)
 
 target_sources(${PROJECT_NAME} PUBLIC
+        ${CMAKE_SOURCE_DIR}/src/common/app.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/app.cpp
         ${CMAKE_SOURCE_DIR}/src/common/audio.hpp
         ${CMAKE_SOURCE_DIR}/src/common/audio.cpp
         ${CMAKE_SOURCE_DIR}/src/common/common.hpp

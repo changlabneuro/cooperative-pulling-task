@@ -324,6 +324,8 @@ void submit_frame() {
       glDrawArrays(GL_TRIANGLES, 0, 6);
     }
   }
+
+  assert(glGetError() == GL_NO_ERROR);
 }
 
 void terminate_rendering() {
