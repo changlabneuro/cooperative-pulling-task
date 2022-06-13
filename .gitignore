@@ -2,5 +2,6 @@ src/__pycache__
 build/
 .idea/
 .vs/
+archive/
 cmake-build-release/
 cmake-build-debug/

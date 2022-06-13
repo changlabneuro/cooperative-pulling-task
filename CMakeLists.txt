@@ -4,13 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 project(om)
 add_library(${PROJECT_NAME} STATIC)
 
-if (MSVC)
-    link_directories(lib/win/${CMAKE_BUILD_TYPE})
-else()
-    add_subdirectory(deps/serial)
-endif()
-
-include_directories(deps/serial/include)
+add_subdirectory(deps/serial)
 
 function(configure_compiler_flags project)
     if(MSVC)
@@ -27,7 +21,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         deps
         deps/stb
         deps/imgui
-        deps/glad/include)
+        deps/glad/include
+        deps/serial/include)
 
 target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/app.hpp
