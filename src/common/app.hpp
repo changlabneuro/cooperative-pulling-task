@@ -9,7 +9,7 @@ namespace om {
 struct App {
   virtual ~App() = default;
   virtual void gui_update() {}
-  virtual void update() {}
+  virtual void task_update() {}
   virtual void setup() {}
   int run();
 

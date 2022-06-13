@@ -61,7 +61,7 @@ int App::run() {
       om::update_framebuffer_dimensions(&render_win);
       om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
 
-      update();
+      task_update();
 
       om::gfx::submit_frame();
       glfwSwapBuffers(render_win.window);

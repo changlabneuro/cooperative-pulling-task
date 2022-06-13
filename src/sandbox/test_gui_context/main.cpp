@@ -17,7 +17,7 @@ struct App : public om::App {
   void gui_update() override {
     render_gui(*this);
   }
-  void update() override {
+  void task_update() override {
     state_tick(*this);
   }
 
