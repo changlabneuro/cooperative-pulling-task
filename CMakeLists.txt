@@ -4,8 +4,12 @@ set(CMAKE_CXX_STANDARD 17)
 project(om)
 add_library(${PROJECT_NAME} STATIC)
 
-link_directories(lib/win/${CMAKE_BUILD_TYPE})
-link_libraries(serial)
+if (MSVC)
+    link_directories(lib/win/${CMAKE_BUILD_TYPE})
+else()
+    add_subdirectory(deps/serial)
+endif()
+
 include_directories(deps/serial/include)
 
 function(configure_compiler_flags project)
@@ -72,4 +76,5 @@ add_subdirectory(deps/portaudio)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
         glfw
-        PortAudio)
+        PortAudio
+        serial)

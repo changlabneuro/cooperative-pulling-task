@@ -26,7 +26,7 @@ void render(ImguiContext* context) {
 }
 
 std::optional<ImguiContext> create_imgui_context(GLFWwindow* window) {
-  const char* glsl_version = "#version 130";
+  const char* glsl_version = "#version 150";
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();

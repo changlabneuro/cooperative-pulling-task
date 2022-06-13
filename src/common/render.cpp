@@ -1,4 +1,5 @@
 #include "render.hpp"
+#include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -137,7 +138,7 @@ VaoHandle create_vao() {
   return result;
 }
 
-const char* const get_quad_vert_source() {
+const char* get_quad_vert_source() {
   static const char* const vert = R"(
     #version 330 core
     layout (location = 0) in vec2 position;
