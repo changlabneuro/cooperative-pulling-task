@@ -64,7 +64,12 @@ target_sources(${PROJECT_NAME} PUBLIC
 
 configure_compiler_flags(${PROJECT_NAME})
 
-add_subdirectory(deps/serial)
+if (MSVC)
+    link_directories(lib/win/${CMAKE_BUILD_TYPE})
+else()
+    add_subdirectory(deps/serial)
+endif()
+
 add_subdirectory(deps/glfw)
 add_subdirectory(deps/portaudio)
 
