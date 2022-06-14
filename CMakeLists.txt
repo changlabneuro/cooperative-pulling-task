@@ -4,8 +4,6 @@ set(CMAKE_CXX_STANDARD 17)
 project(om)
 add_library(${PROJECT_NAME} STATIC)
 
-add_subdirectory(deps/serial)
-
 function(configure_compiler_flags project)
     if(MSVC)
         target_compile_options(${project} PRIVATE /W4)
@@ -22,7 +20,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         deps/stb
         deps/imgui
         deps/glad/include
-        deps/serial/include)
+        deps/serial/include
+        deps/json/include)
 
 target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/app.hpp
@@ -65,7 +64,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 
 configure_compiler_flags(${PROJECT_NAME})
 
-add_subdirectory(src/sandbox)
+add_subdirectory(deps/serial)
 add_subdirectory(deps/glfw)
 add_subdirectory(deps/portaudio)
 
@@ -73,3 +72,5 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         glfw
         PortAudio
         serial)
+
+add_subdirectory(src/sandbox)

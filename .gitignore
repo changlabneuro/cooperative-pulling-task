@@ -5,3 +5,4 @@ build/
 archive/
 cmake-build-release/
 cmake-build-debug/
+data/
