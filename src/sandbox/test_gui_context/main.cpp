@@ -1,12 +1,13 @@
 #include "common/app.hpp"
 #include "common/gui.hpp"
+#include "common/lever_pull.hpp"
 #include "training.hpp"
 #include <imgui.h>
 
 struct App;
 
 void render_gui(App& app);
-void state_tick(App& app);
+void task_update(App& app);
 void setup(App& app);
 
 struct App : public om::App {
@@ -18,18 +19,27 @@ struct App : public om::App {
     render_gui(*this);
   }
   void task_update() override {
-    state_tick(*this);
+    ::task_update(*this);
   }
 
   int lever_force_limits[2]{0, 20};
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
   om::Vec3f stim0_color{1.0f};
   om::Vec3f stim1_color{1.0f};
+
+  om::lever::PullDetect detect_pull[2]{};
 };
 
 void setup(App& app) {
   auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
   app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+
+  const float dflt_rising_edge = 20.0f;
+  const float dflt_falling_edge = 10.0f;
+  app.detect_pull[0].rising_edge = dflt_rising_edge;
+  app.detect_pull[1].rising_edge = dflt_rising_edge;
+  app.detect_pull[0].falling_edge = dflt_falling_edge;
+  app.detect_pull[1].falling_edge = dflt_falling_edge;
 }
 
 void render_gui(App& app) {
@@ -54,19 +64,42 @@ void render_gui(App& app) {
     app.lever_force_limits[1] = gui_res.force_limit1.value();
   }
 
+  if (ImGui::TreeNode("PullDetect")) {
+    if (ImGui::InputFloat("RisingEdge", &app.detect_pull[0].rising_edge)) {
+      app.detect_pull[1].rising_edge = app.detect_pull[0].rising_edge;
+    }
+    if (ImGui::InputFloat("FallingEdge", &app.detect_pull[0].falling_edge)) {
+      app.detect_pull[1].falling_edge = app.detect_pull[1].rising_edge;
+    }
+    ImGui::TreePop();
+  }
+
   ImGui::InputFloat3("Stim0Color", &app.stim0_color.x);
   ImGui::InputFloat3("Stim1Color", &app.stim1_color.x);
 
   ImGui::End();
 }
 
-void state_tick(App& app) {
+void task_update(App& app) {
   using namespace om;
 
   static int state{};
   static bool entry{true};
   static NewTrialState new_trial{};
   static DelayState delay{};
+
+  for (int i = 0; i < 2; i++) {
+    const auto lh = app.levers[i];
+    auto& pd = app.detect_pull[i];
+    if (auto lever_state = om::lever::get_state(om::lever::get_global_lever_system(), lh)) {
+      om::lever::PullDetectParams params{};
+      params.current_position = lever_state.value().potentiometer_reading;
+      auto pull_res = om::lever::detect_pull(&pd, params);
+      if (pull_res.pulled_lever && app.debug_audio_buffer) {
+        om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
+      }
+    }
+  }
 
   switch (state) {
     case 0: {
