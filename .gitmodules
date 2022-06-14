@@ -13,3 +13,6 @@
 [submodule "deps/AudioFile"]
 	path = deps/AudioFile
 	url = https://github.com/adamstark/AudioFile
+[submodule "deps/json"]
+	path = deps/json
+	url = https://github.com/nlohmann/json
