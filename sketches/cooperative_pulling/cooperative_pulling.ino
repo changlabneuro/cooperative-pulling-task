@@ -66,7 +66,7 @@ pinMode(ENABLE_PIN, OUTPUT);
 pinMode(DIRECTION_PIN, OUTPUT);
 pinMode(PWM_PIN, OUTPUT);
 pinMode(FEEDBACK_PIN, INPUT);
-digitalWrite(ENABLE_PIN, 1);
+digitalWrite(ENABLE_PIN, 0);
 digitalWrite(DIRECTION_PIN, 1);
 analogWrite(PWM_PIN, 0);
 
@@ -158,14 +158,14 @@ while (Serial.available() > 0) {
 
   if(incomingByte == 's') {
       current_average = myRA.getAverage();
-      Serial.print("SG: ");
+      Serial.print("strain gauge reading: ");
       Serial.print(current_average);
       Serial.print('\t');
-      Serial.print("CPWM: ");
+      Serial.print("calculated PWM: ");
       calculated_pwm = Strain_COEF[0]*pow(current_average, 6) + Strain_COEF[1]*pow(current_average, 5) + Strain_COEF[2]*pow(current_average, 4) + Strain_COEF[3]*pow(current_average, 3) + Strain_COEF[4]*pow(current_average, 2) + Strain_COEF[5]*current_average + Strain_COEF[6];
       Serial.print(calculated_pwm);
       Serial.print('\t');
-      Serial.print("APWM: ");
+      Serial.print("acutal PWM: ");
       Serial.print(PWM_VALUE);
       Serial.print("P: ");
       Serial.println(analogRead(POT_PIN));      
