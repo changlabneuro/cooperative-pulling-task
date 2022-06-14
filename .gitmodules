@@ -4,6 +4,15 @@
 [submodule "deps/imgui"]
 	path = deps/imgui
 	url = https://github.com/ocornut/imgui
-[submodule "deps/serial"]
-	path = deps/serial
-	url = https://github.com/wjwwood/serial
+[submodule "deps/stb"]
+	path = deps/stb
+	url = https://github.com/nothings/stb
+[submodule "deps/portaudio"]
+	path = deps/portaudio
+	url = https://github.com/PortAudio/portaudio
+[submodule "deps/AudioFile"]
+	path = deps/AudioFile
+	url = https://github.com/adamstark/AudioFile
+[submodule "deps/json"]
+	path = deps/json
+	url = https://github.com/nlohmann/json

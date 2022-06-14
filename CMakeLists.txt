@@ -4,10 +4,6 @@ set(CMAKE_CXX_STANDARD 17)
 project(om)
 add_library(${PROJECT_NAME} STATIC)
 
-link_directories(lib/win/${CMAKE_BUILD_TYPE})
-link_libraries(serial)
-include_directories(deps/serial/include)
-
 function(configure_compiler_flags project)
     if(MSVC)
         target_compile_options(${project} PRIVATE /W4)
@@ -20,16 +16,28 @@ endfunction(configure_compiler_flags)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
         src
+        deps
+        deps/stb
         deps/imgui
-        deps/glad/include)
+        deps/glad/include
+        deps/serial/include
+        deps/json/include)
 
 target_sources(${PROJECT_NAME} PUBLIC
+        ${CMAKE_SOURCE_DIR}/src/common/app.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/app.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/audio.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/audio.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/common.hpp
         ${CMAKE_SOURCE_DIR}/src/common/serial.hpp
         ${CMAKE_SOURCE_DIR}/src/common/serial.cpp
         ${CMAKE_SOURCE_DIR}/src/common/serial_lever.hpp
         ${CMAKE_SOURCE_DIR}/src/common/serial_lever.cpp
         ${CMAKE_SOURCE_DIR}/src/common/lever_system.hpp
         ${CMAKE_SOURCE_DIR}/src/common/lever_system.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/om.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/gui.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/gui.cpp
         ${CMAKE_SOURCE_DIR}/src/common/glfw.hpp
         ${CMAKE_SOURCE_DIR}/src/common/glfw.cpp
         ${CMAKE_SOURCE_DIR}/src/common/imgui.hpp
@@ -37,6 +45,10 @@ target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/identifier.hpp
         ${CMAKE_SOURCE_DIR}/src/common/ringbuffer.hpp
         ${CMAKE_SOURCE_DIR}/src/common/handshake.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/vector.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/render.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/render.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/time.hpp
 
         #   GLAD
         ${CMAKE_SOURCE_DIR}/deps/glad/src/glad.c
@@ -52,7 +64,13 @@ target_sources(${PROJECT_NAME} PUBLIC
 
 configure_compiler_flags(${PROJECT_NAME})
 
-add_subdirectory(src/sandbox)
+add_subdirectory(deps/serial)
 add_subdirectory(deps/glfw)
+add_subdirectory(deps/portaudio)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
+target_link_libraries(${PROJECT_NAME} PUBLIC
+        glfw
+        PortAudio
+        serial)
+
+add_subdirectory(src/sandbox)

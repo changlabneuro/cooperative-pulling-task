@@ -8,7 +8,7 @@ bool initialize_glfw() {
   return glfwInit();
 }
 
-void om::terminate_glfw() {
+void terminate_glfw() {
   glfwTerminate();
 }
 

@@ -8,6 +8,7 @@ struct LeverState {
   float strain_gauge;
   float calculated_pwm;
   float actual_pwm;
+  float potentiometer_reading;
 };
 
 constexpr uint32_t default_baud_rate() {
@@ -15,7 +16,7 @@ constexpr uint32_t default_baud_rate() {
 }
 
 constexpr uint32_t default_read_write_timeout() {
-  return 25;
+  return 1000;
 }
 
 std::string to_string(const LeverState& state, const std::string& delim = "\n");
