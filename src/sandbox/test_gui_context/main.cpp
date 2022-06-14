@@ -1,6 +1,7 @@
 #include "common/app.hpp"
 #include "common/gui.hpp"
 #include "common/lever_pull.hpp"
+#include "common/common.hpp"
 #include "training.hpp"
 #include <imgui.h>
 
@@ -28,14 +29,16 @@ struct App : public om::App {
   om::Vec3f stim1_color{1.0f};
 
   om::lever::PullDetect detect_pull[2]{};
+  float lever_position_limits[2]{25e3f, 33e3f};
+  bool invert_position{true};
 };
 
 void setup(App& app) {
   auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
   app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
 
-  const float dflt_rising_edge = 20.0f;
-  const float dflt_falling_edge = 10.0f;
+  const float dflt_rising_edge = 0.6f;
+  const float dflt_falling_edge = 0.25f;
   app.detect_pull[0].rising_edge = dflt_rising_edge;
   app.detect_pull[1].rising_edge = dflt_rising_edge;
   app.detect_pull[0].falling_edge = dflt_falling_edge;
@@ -43,6 +46,8 @@ void setup(App& app) {
 }
 
 void render_gui(App& app) {
+  const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
+
   ImGui::Begin("GUI");
   if (ImGui::Button("Refresh ports")) {
     app.ports = om::enumerate_ports();
@@ -65,12 +70,15 @@ void render_gui(App& app) {
   }
 
   if (ImGui::TreeNode("PullDetect")) {
-    if (ImGui::InputFloat("RisingEdge", &app.detect_pull[0].rising_edge)) {
+    ImGui::InputFloat2("PositionLimits", app.lever_position_limits);
+
+    if (ImGui::InputFloat("RisingEdge", &app.detect_pull[0].rising_edge, 0.0f, 0.0f, "%0.3f", enter_flag)) {
       app.detect_pull[1].rising_edge = app.detect_pull[0].rising_edge;
     }
-    if (ImGui::InputFloat("FallingEdge", &app.detect_pull[0].falling_edge)) {
+    if (ImGui::InputFloat("FallingEdge", &app.detect_pull[0].falling_edge, 0.0f, 0.0f, "%0.3f", enter_flag)) {
       app.detect_pull[1].falling_edge = app.detect_pull[1].rising_edge;
     }
+
     ImGui::TreePop();
   }
 
@@ -78,6 +86,16 @@ void render_gui(App& app) {
   ImGui::InputFloat3("Stim1Color", &app.stim1_color.x);
 
   ImGui::End();
+}
+
+float to_normalized(float v, float min, float max, bool inv) {
+  if (min == max) {
+    v = 0.0f;
+  } else {
+    v = om::clamp(v, min, max);
+    v = (v - min) / (max - min);
+  }
+  return inv ? 1.0f - v : v;
 }
 
 void task_update(App& app) {
@@ -93,7 +111,11 @@ void task_update(App& app) {
     auto& pd = app.detect_pull[i];
     if (auto lever_state = om::lever::get_state(om::lever::get_global_lever_system(), lh)) {
       om::lever::PullDetectParams params{};
-      params.current_position = lever_state.value().potentiometer_reading;
+      params.current_position = to_normalized(
+        lever_state.value().potentiometer_reading,
+        app.lever_position_limits[0],
+        app.lever_position_limits[1],
+        app.invert_position);
       auto pull_res = om::lever::detect_pull(&pd, params);
       if (pull_res.pulled_lever && app.debug_audio_buffer) {
         om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
@@ -103,7 +125,7 @@ void task_update(App& app) {
 
   switch (state) {
     case 0: {
-      new_trial.play_sound_on_entry = app.debug_audio_buffer;
+      //new_trial.play_sound_on_entry = app.debug_audio_buffer;
       new_trial.stim0_color = app.stim0_color;
       new_trial.stim1_color = app.stim1_color;
       auto nt_res = tick_new_trial(&new_trial, &entry);
