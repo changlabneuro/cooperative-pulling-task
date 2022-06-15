@@ -17,7 +17,7 @@ std::optional<int> parse_force(const std::string& s) {
   }
 }
 
-float parse_float(const char* base, size_t off, const char* prefix) {
+[[maybe_unused]] float parse_float(const char* base, size_t off, const char* prefix) {
   char* ignore;
   return std::strtof(base + off + std::strlen(prefix), &ignore);
 }
