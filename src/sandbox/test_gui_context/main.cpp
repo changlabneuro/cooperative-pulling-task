@@ -24,13 +24,18 @@ struct App : public om::App {
   }
 
   int lever_force_limits[2]{0, 20};
-  std::optional<om::audio::BufferHandle> debug_audio_buffer;
-  om::Vec3f stim0_color{1.0f};
-  om::Vec3f stim1_color{1.0f};
-
   om::lever::PullDetect detect_pull[2]{};
   float lever_position_limits[2]{25e3f, 33e3f};
-  bool invert_position{true};
+  bool invert_lever_position{true};
+
+  om::Vec2f stim0_size{0.25f};
+  om::Vec2f stim0_offset{-0.25f, 0.0f};
+  om::Vec3f stim0_color{1.0f};
+  om::Vec2f stim1_size{0.25f};
+  om::Vec2f stim1_offset{0.25f, 0.0f};
+  om::Vec3f stim1_color{1.0f};
+
+  std::optional<om::audio::BufferHandle> debug_audio_buffer;
 };
 
 void setup(App& app) {
@@ -72,18 +77,29 @@ void render_gui(App& app) {
   if (ImGui::TreeNode("PullDetect")) {
     ImGui::InputFloat2("PositionLimits", app.lever_position_limits);
 
-    if (ImGui::InputFloat("RisingEdge", &app.detect_pull[0].rising_edge, 0.0f, 0.0f, "%0.3f", enter_flag)) {
-      app.detect_pull[1].rising_edge = app.detect_pull[0].rising_edge;
+    auto& detect = app.detect_pull;
+    if (ImGui::InputFloat("RisingEdge", &detect[0].rising_edge, 0.0f, 0.0f, "%0.3f", enter_flag)) {
+      detect[1].rising_edge = detect[0].rising_edge;
     }
-    if (ImGui::InputFloat("FallingEdge", &app.detect_pull[0].falling_edge, 0.0f, 0.0f, "%0.3f", enter_flag)) {
-      app.detect_pull[1].falling_edge = app.detect_pull[1].rising_edge;
+    if (ImGui::InputFloat("FallingEdge", &detect[0].falling_edge, 0.0f, 0.0f, "%0.3f", enter_flag)) {
+      detect[1].falling_edge = detect[1].rising_edge;
     }
 
     ImGui::TreePop();
   }
 
-  ImGui::InputFloat3("Stim0Color", &app.stim0_color.x);
-  ImGui::InputFloat3("Stim1Color", &app.stim1_color.x);
+  if (ImGui::TreeNode("Stim0")) {
+    ImGui::InputFloat3("Color", &app.stim0_color.x);
+    ImGui::InputFloat2("Offset", &app.stim0_offset.x);
+    ImGui::InputFloat2("Size", &app.stim0_size.x);
+    ImGui::TreePop();
+  }
+  if (ImGui::TreeNode("Stim1")) {
+    ImGui::InputFloat3("Color", &app.stim1_color.x);
+    ImGui::InputFloat2("Offset", &app.stim1_offset.x);
+    ImGui::InputFloat2("Size", &app.stim1_size.x);
+    ImGui::TreePop();
+  }
 
   ImGui::End();
 }
@@ -115,7 +131,7 @@ void task_update(App& app) {
         lever_state.value().potentiometer_reading,
         app.lever_position_limits[0],
         app.lever_position_limits[1],
-        app.invert_position);
+        app.invert_lever_position);
       auto pull_res = om::lever::detect_pull(&pd, params);
       if (pull_res.pulled_lever && app.debug_audio_buffer) {
         om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
@@ -127,7 +143,11 @@ void task_update(App& app) {
     case 0: {
       //new_trial.play_sound_on_entry = app.debug_audio_buffer;
       new_trial.stim0_color = app.stim0_color;
+      new_trial.stim0_offset = app.stim0_offset;
+      new_trial.stim0_size = app.stim0_size;
       new_trial.stim1_color = app.stim1_color;
+      new_trial.stim1_offset = app.stim1_offset;
+      new_trial.stim1_size = app.stim1_size;
       auto nt_res = tick_new_trial(&new_trial, &entry);
       if (nt_res.finished) {
         state = 1;
