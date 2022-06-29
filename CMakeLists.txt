@@ -33,6 +33,8 @@ target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/serial.cpp
         ${CMAKE_SOURCE_DIR}/src/common/serial_lever.hpp
         ${CMAKE_SOURCE_DIR}/src/common/serial_lever.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/juice_pump.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/juice_pump.cpp
         ${CMAKE_SOURCE_DIR}/src/common/lever_system.hpp
         ${CMAKE_SOURCE_DIR}/src/common/lever_system.cpp
         ${CMAKE_SOURCE_DIR}/src/common/lever_pull.hpp
