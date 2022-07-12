@@ -45,6 +45,7 @@ int App::run() {
     glfwPollEvents();
 
     om::lever::update(lever_sys);
+    om::pump::submit_commands();
     {
       glfwMakeContextCurrent(gui_win.window);
       om::update_framebuffer_dimensions(&gui_win);
@@ -71,6 +72,7 @@ int App::run() {
   om::audio::terminate_audio();
   om::gfx::terminate_rendering();
   om::lever::terminate(lever_sys);
+  om::pump::terminate_pump_system();
   om::destroy_imgui_context(&imgui_context);
   om::destroy_glfw_context(&gui_win);
   om::destroy_glfw_context(&render_win);

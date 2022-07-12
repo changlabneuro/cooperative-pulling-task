@@ -4,7 +4,7 @@ Set addresses to 1 and 2 on pumps
 Set diameter
 
 <addr> DIA <dia>				#	set syringe diameter
-<addr> RAT <rate> <units>		#	set pumping rate, pp 43/55
+<addr> RAT <rate> <units>			#	set pumping rate, pp 43/55
 <addr> RUN					#	start pumping program
 <addr> STP					# 	stop pumping program
-<addr> VOL <vol> <units>		#	volume units, pp 
+<addr> VOL <vol> <units>			#	volume units, pp 

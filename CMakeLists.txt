@@ -35,13 +35,15 @@ target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/serial_lever.cpp
         ${CMAKE_SOURCE_DIR}/src/common/juice_pump.hpp
         ${CMAKE_SOURCE_DIR}/src/common/juice_pump.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/juice_pump_gui.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/juice_pump_gui.cpp
         ${CMAKE_SOURCE_DIR}/src/common/lever_system.hpp
         ${CMAKE_SOURCE_DIR}/src/common/lever_system.cpp
         ${CMAKE_SOURCE_DIR}/src/common/lever_pull.hpp
         ${CMAKE_SOURCE_DIR}/src/common/lever_pull.cpp
         ${CMAKE_SOURCE_DIR}/src/common/om.hpp
-        ${CMAKE_SOURCE_DIR}/src/common/gui.hpp
-        ${CMAKE_SOURCE_DIR}/src/common/gui.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/lever_gui.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/lever_gui.cpp
         ${CMAKE_SOURCE_DIR}/src/common/glfw.hpp
         ${CMAKE_SOURCE_DIR}/src/common/glfw.cpp
         ${CMAKE_SOURCE_DIR}/src/common/imgui.hpp

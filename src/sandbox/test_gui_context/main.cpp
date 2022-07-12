@@ -1,7 +1,9 @@
 #include "common/app.hpp"
-#include "common/gui.hpp"
+#include "common/lever_gui.hpp"
+#include "common/juice_pump_gui.hpp"
 #include "common/lever_pull.hpp"
 #include "common/common.hpp"
+#include "common/juice_pump.hpp"
 #include "training.hpp"
 #include <imgui.h>
 
@@ -50,14 +52,7 @@ void setup(App& app) {
   app.detect_pull[1].falling_edge = dflt_falling_edge;
 }
 
-void render_gui(App& app) {
-  const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
-
-  ImGui::Begin("GUI");
-  if (ImGui::Button("Refresh ports")) {
-    app.ports = om::enumerate_ports();
-  }
-
+void render_lever_gui(App& app) {
   om::gui::LeverGUIParams gui_params{};
   gui_params.force_limit0 = app.lever_force_limits[0];
   gui_params.force_limit1 = app.lever_force_limits[1];
@@ -73,6 +68,25 @@ void render_gui(App& app) {
   if (gui_res.force_limit1) {
     app.lever_force_limits[1] = gui_res.force_limit1.value();
   }
+}
+
+void render_juice_pump_gui(App& app) {
+  om::gui::JuicePumpGUIParams gui_params{};
+  gui_params.serial_ports = app.ports.data();
+  gui_params.num_ports = int(app.ports.size());
+  gui_params.num_pumps = 2;
+  om::gui::render_juice_pump_gui(gui_params);
+}
+
+void render_gui(App& app) {
+  const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
+
+  ImGui::Begin("GUI");
+  if (ImGui::Button("Refresh ports")) {
+    app.ports = om::enumerate_ports();
+  }
+
+  render_lever_gui(app);
 
   if (ImGui::TreeNode("PullDetect")) {
     ImGui::InputFloat2("PositionLimits", app.lever_position_limits);
@@ -101,6 +115,10 @@ void render_gui(App& app) {
     ImGui::TreePop();
   }
 
+  ImGui::End();
+
+  ImGui::Begin("JuicePump");
+  render_juice_pump_gui(app);
   ImGui::End();
 }
 
