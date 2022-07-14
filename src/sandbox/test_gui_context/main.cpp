@@ -29,6 +29,8 @@ struct App : public om::App {
   om::lever::PullDetect detect_pull[2]{};
   float lever_position_limits[2]{25e3f, 33e3f};
   bool invert_lever_position{true};
+  
+  bool allow_automated_juice_delivery{};
 
   om::Vec2f stim0_size{0.25f};
   om::Vec2f stim0_offset{-0.25f, 0.0f};
@@ -75,7 +77,12 @@ void render_juice_pump_gui(App& app) {
   gui_params.serial_ports = app.ports.data();
   gui_params.num_ports = int(app.ports.size());
   gui_params.num_pumps = 2;
-  om::gui::render_juice_pump_gui(gui_params);
+  gui_params.allow_automated_run = app.allow_automated_juice_delivery;
+  auto res = om::gui::render_juice_pump_gui(gui_params);
+
+  if (res.allow_automated_run) {
+    app.allow_automated_juice_delivery = res.allow_automated_run.value();
+  }
 }
 
 void render_gui(App& app) {
@@ -166,6 +173,12 @@ void task_update(App& app) {
       new_trial.stim1_color = app.stim1_color;
       new_trial.stim1_offset = app.stim1_offset;
       new_trial.stim1_size = app.stim1_size;
+
+      if (entry && app.allow_automated_juice_delivery) {
+        auto pump_handle = om::pump::ith_pump(0);
+        om::pump::run_dispense_program(pump_handle);
+      }
+
       auto nt_res = tick_new_trial(&new_trial, &entry);
       if (nt_res.finished) {
         state = 1;

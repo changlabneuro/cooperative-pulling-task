@@ -115,12 +115,24 @@ std::string make_set_rate_command_string(int addr, int rate, std::optional<pump:
   return result;
 }
 
+std::string to_float_limit_trailing_digits(float v) {
+  char buff[128];
+  int cx = std::snprintf(buff, 128, "%0.1f", v);
+  if (cx >= 0 && cx < 128) {
+    return std::string{buff};
+  } else {
+    assert(false);
+    return "";
+  }
+}
+
 std::string make_set_volume_command_string(int addr, float vol,
                                            std::optional<pump::VolumeUnits> units) {
   std::string result;
   result += std::to_string(addr);
   result += " VOL ";
-  result += std::to_string(vol);
+  result += to_float_limit_trailing_digits(vol);
+#if 0
   if (units) {
     result += " ";
     switch (units.value()) {
@@ -133,6 +145,7 @@ std::string make_set_volume_command_string(int addr, float vol,
       }
     }
   }
+#endif
   result += Config::serial_terminator;
   return result;
 }

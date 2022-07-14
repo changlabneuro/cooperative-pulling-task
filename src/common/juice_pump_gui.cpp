@@ -5,7 +5,9 @@
 
 namespace om {
 
-void gui::render_juice_pump_gui(const JuicePumpGUIParams& params) {
+gui::JuicePumpGUIResult gui::render_juice_pump_gui(const JuicePumpGUIParams& params) {
+  gui::JuicePumpGUIResult result{};
+
   for (int i = 0; i < params.num_ports; i++) {
     if (ImGui::Button(params.serial_ports[i].port.c_str())) {
       om::pump::initialize_pump_system(params.serial_ports[i].port, params.num_pumps);
@@ -14,6 +16,15 @@ void gui::render_juice_pump_gui(const JuicePumpGUIParams& params) {
 
   if (ImGui::Button("TerminateSystem")) {
     om::pump::terminate_pump_system();
+  }
+
+  const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
+
+  if (om::pump::num_initialized_pumps() > 0) {
+    bool allow_run = params.allow_automated_run;
+    if (ImGui::Checkbox("AllowAutomatedRun", &allow_run)) {
+      result.allow_automated_run = allow_run;
+    }
   }
 
   for (int i = 0; i < om::pump::num_initialized_pumps(); i++) {
@@ -35,6 +46,12 @@ void gui::render_juice_pump_gui(const JuicePumpGUIParams& params) {
             pump_handle, desired_pump_state.rate, desired_pump_state.rate_units);
         }
       }
+      if (ImGui::InputFloat("Volume", &desired_pump_state.volume, 0.0f, 0.0f, "%0.3f", enter_flag)) {
+        if (desired_pump_state.volume >= 0.0f) {
+          om::pump::set_dispensed_volume(
+            pump_handle, desired_pump_state.volume, desired_pump_state.volume_units);
+        }
+      }
 
       auto canonical_pump_state = om::pump::read_canonical_pump_state(pump_handle);
       if (canonical_pump_state.connection_open) {
@@ -51,6 +68,8 @@ void gui::render_juice_pump_gui(const JuicePumpGUIParams& params) {
       ImGui::TreePop();
     }
   }
+
+  return result;
 }
 
 }

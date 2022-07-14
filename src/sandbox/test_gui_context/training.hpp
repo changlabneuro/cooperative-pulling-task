@@ -8,7 +8,7 @@ namespace om {
 
 struct NewTrialState {
   TimePoint t0;
-  float total_time{10.0f};
+  float total_time{20.0f};
   Vec2f stim0_size{0.25f};
   Vec2f stim0_offset{-0.25f, 0.0f};
   Vec3f stim0_color{1.0f};

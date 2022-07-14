@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 namespace om {
 struct PortDescriptor;
 }
@@ -10,8 +12,13 @@ struct JuicePumpGUIParams {
   const om::PortDescriptor* serial_ports;
   int num_ports;
   int num_pumps;
+  bool allow_automated_run;
 };
 
-void render_juice_pump_gui(const JuicePumpGUIParams& params);
+struct JuicePumpGUIResult {
+  std::optional<bool> allow_automated_run;
+};
+
+JuicePumpGUIResult render_juice_pump_gui(const JuicePumpGUIParams& params);
 
 }
