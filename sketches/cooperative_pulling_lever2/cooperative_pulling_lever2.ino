@@ -1,7 +1,7 @@
 #include "RunningAverage.h"
 
-#define ENABLE_PIN 8
-#define DIRECTION_PIN 9
+#define ENABLE_PIN 9 //8 - modified: WS
+#define DIRECTION_PIN 8 //9 - modified: WS
 #define PWM_PIN 10
 #define FEEDBACK_PIN 11
 #define analogResolution 16
@@ -71,7 +71,7 @@ pinMode(DIRECTION_PIN, OUTPUT);
 pinMode(PWM_PIN, OUTPUT);
 pinMode(FEEDBACK_PIN, INPUT);
 //digitalWrite(ENABLE_PIN, 1);
-digitalWrite(ENABLE_PIN, 0);
+digitalWrite(ENABLE_PIN, 1); // 0  - modified: WS
 digitalWrite(DIRECTION_PIN, DIRECTION);
 analogWrite(PWM_PIN, 0);
 
