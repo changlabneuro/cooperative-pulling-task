@@ -25,18 +25,19 @@ struct App : public om::App {
     ::task_update(*this);
   }
 
-  int lever_force_limits[2]{0, 20};
+  int lever_force_limits[2]{0, 150};
   om::lever::PullDetect detect_pull[2]{};
-  float lever_position_limits[2]{25e3f, 33e3f};
-  bool invert_lever_position{true};
+  // float lever_position_limits[2]{25e3f, 33e3f};
+  float lever_position_limits[4]{ 64e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer range - WS 
+  bool invert_lever_position[2]{true, false};
   
   bool allow_automated_juice_delivery{};
 
   om::Vec2f stim0_size{0.25f};
-  om::Vec2f stim0_offset{-0.25f, 0.0f};
+  om::Vec2f stim0_offset{-0.4f, 0.0f};
   om::Vec3f stim0_color{1.0f};
   om::Vec2f stim1_size{0.25f};
-  om::Vec2f stim1_offset{0.25f, 0.0f};
+  om::Vec2f stim1_offset{0.4f, 0.0f};
   om::Vec3f stim1_color{1.0f};
 
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
@@ -154,9 +155,9 @@ void task_update(App& app) {
       om::lever::PullDetectParams params{};
       params.current_position = to_normalized(
         lever_state.value().potentiometer_reading,
-        app.lever_position_limits[0],
-        app.lever_position_limits[1],
-        app.invert_lever_position);
+        app.lever_position_limits[2*i],
+        app.lever_position_limits[2*i+1],
+        app.invert_lever_position[i]);
       auto pull_res = om::lever::detect_pull(&pd, params);
       if (pull_res.pulled_lever && app.debug_audio_buffer) {
         om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
@@ -175,7 +176,7 @@ void task_update(App& app) {
       new_trial.stim1_size = app.stim1_size;
 
       if (entry && app.allow_automated_juice_delivery) {
-        auto pump_handle = om::pump::ith_pump(0);
+        auto pump_handle = om::pump::ith_pump(1); // pump id: 0 - pump 1; 1 - pump 2
         om::pump::run_dispense_program(pump_handle);
       }
 
