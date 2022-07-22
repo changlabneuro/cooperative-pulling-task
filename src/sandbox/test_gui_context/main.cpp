@@ -25,14 +25,15 @@ struct App : public om::App {
     ::task_update(*this);
   }
 
-  int lever_force_limits[2]{0, 150};
+  int lever_force_limits[2]{0, 250};
   om::lever::PullDetect detect_pull[2]{};
   // float lever_position_limits[2]{25e3f, 33e3f};
-  float lever_position_limits[4]{ 64e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer range - WS 
+  float lever_position_limits[4]{ 64e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
   bool invert_lever_position[2]{true, false};
   
   bool allow_automated_juice_delivery{};
 
+  float new_total_time{15.0f};
   om::Vec2f stim0_size{0.25f};
   om::Vec2f stim0_offset{-0.4f, 0.0f};
   om::Vec3f stim0_color{1.0f};
@@ -159,8 +160,16 @@ void task_update(App& app) {
         app.lever_position_limits[2*i+1],
         app.invert_lever_position[i]);
       auto pull_res = om::lever::detect_pull(&pd, params);
-      if (pull_res.pulled_lever && app.debug_audio_buffer) {
-        om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
+      // if (pull_res.pulled_lever && app.debug_audio_buffer) {
+      if (pull_res.pulled_lever && app.debug_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 0)  -WS
+        //om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
+
+        auto pump_handle = om::pump::ith_pump(i); // pump id: 0 - pump 1; 1 - pump 2  -WS
+        om::pump::run_dispense_program(pump_handle);
+
+        state = 1;
+        entry = true; // end the trial when the one of the juice is delivered  - WS
+        break;
       }
     }
   }
@@ -168,6 +177,7 @@ void task_update(App& app) {
   switch (state) {
     case 0: {
       //new_trial.play_sound_on_entry = app.debug_audio_buffer;
+      new_trial.total_time = app.new_total_time;
       new_trial.stim0_color = app.stim0_color;
       new_trial.stim0_offset = app.stim0_offset;
       new_trial.stim0_size = app.stim0_size;
