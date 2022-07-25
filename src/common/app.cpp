@@ -55,17 +55,29 @@ int App::run() {
 
       om::render(&imgui_context);
       glfwSwapBuffers(gui_win.window);
+
     }
 
+    if (!start_render)
     {
       glfwMakeContextCurrent(render_win.window);
       om::update_framebuffer_dimensions(&render_win);
       om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
 
-      task_update();
-
-      om::gfx::submit_frame();
       glfwSwapBuffers(render_win.window);
+    }
+
+
+    if(start_render)
+    {
+    glfwMakeContextCurrent(render_win.window);
+    om::update_framebuffer_dimensions(&render_win);
+    om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
+
+    task_update();
+
+    om::gfx::submit_frame();
+    glfwSwapBuffers(render_win.window);
     }
   }
 

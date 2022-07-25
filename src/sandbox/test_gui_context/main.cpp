@@ -24,6 +24,7 @@ struct App : public om::App {
   void task_update() override {
     ::task_update(*this);
   }
+  
 
   int lever_force_limits[2]{0, 250};
   om::lever::PullDetect detect_pull[2]{};
@@ -33,11 +34,11 @@ struct App : public om::App {
   
   bool allow_automated_juice_delivery{};
 
-  float new_total_time{15.0f};
-  om::Vec2f stim0_size{0.25f};
+  float new_total_time{10.0f};
+  om::Vec2f stim0_size{0.15f};
   om::Vec2f stim0_offset{-0.4f, 0.0f};
   om::Vec3f stim0_color{1.0f};
-  om::Vec2f stim1_size{0.25f};
+  om::Vec2f stim1_size{0.15f};
   om::Vec2f stim1_offset{0.4f, 0.0f};
   om::Vec3f stim1_color{1.0f};
 
@@ -45,7 +46,8 @@ struct App : public om::App {
 };
 
 void setup(App& app) {
-  auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
+  //auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
+  auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-09.wav";
   app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
 
   const float dflt_rising_edge = 0.6f;
@@ -90,10 +92,20 @@ void render_juice_pump_gui(App& app) {
 void render_gui(App& app) {
   const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
 
+
   ImGui::Begin("GUI");
   if (ImGui::Button("Refresh ports")) {
     app.ports = om::enumerate_ports();
   }
+
+  if (ImGui::Button("start the trial")) {
+    app.start_render = true;
+  }
+
+  if (ImGui::Button("pause the trial")) {
+    app.start_render = false;
+  }
+
 
   render_lever_gui(app);
 
@@ -111,6 +123,7 @@ void render_gui(App& app) {
     ImGui::TreePop();
   }
 
+
   if (ImGui::TreeNode("Stim0")) {
     ImGui::InputFloat3("Color", &app.stim0_color.x);
     ImGui::InputFloat2("Offset", &app.stim0_offset.x);
@@ -123,7 +136,7 @@ void render_gui(App& app) {
     ImGui::InputFloat2("Size", &app.stim1_size.x);
     ImGui::TreePop();
   }
-
+  
   ImGui::End();
 
   ImGui::Begin("JuicePump");
@@ -141,6 +154,7 @@ float to_normalized(float v, float min, float max, bool inv) {
   return inv ? 1.0f - v : v;
 }
 
+
 void task_update(App& app) {
   using namespace om;
 
@@ -148,6 +162,7 @@ void task_update(App& app) {
   static bool entry{true};
   static NewTrialState new_trial{};
   static DelayState delay{};
+
 
   for (int i = 0; i < 2; i++) {
     const auto lh = app.levers[i];
@@ -160,8 +175,8 @@ void task_update(App& app) {
         app.lever_position_limits[2*i+1],
         app.invert_lever_position[i]);
       auto pull_res = om::lever::detect_pull(&pd, params);
-      // if (pull_res.pulled_lever && app.debug_audio_buffer) {
-      if (pull_res.pulled_lever && app.debug_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 0)  -WS
+      if (pull_res.pulled_lever && app.debug_audio_buffer) {
+      // if (pull_res.pulled_lever && app.debug_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 0)  -WS
         //om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
 
         auto pump_handle = om::pump::ith_pump(i); // pump id: 0 - pump 1; 1 - pump 2  -WS
@@ -176,7 +191,7 @@ void task_update(App& app) {
 
   switch (state) {
     case 0: {
-      //new_trial.play_sound_on_entry = app.debug_audio_buffer;
+      new_trial.play_sound_on_entry = app.debug_audio_buffer;
       new_trial.total_time = app.new_total_time;
       new_trial.stim0_color = app.stim0_color;
       new_trial.stim0_offset = app.stim0_offset;
@@ -198,7 +213,7 @@ void task_update(App& app) {
       break;
     }
     case 1: {
-      delay.total_time = 2.0f;
+      delay.total_time = 1.0f; // 2.0f
       if (tick_delay(&delay, &entry)) {
         state = 0;
         entry = true;

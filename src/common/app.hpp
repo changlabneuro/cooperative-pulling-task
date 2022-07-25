@@ -15,6 +15,7 @@ struct App {
 
   std::vector<om::PortDescriptor> ports;
   std::array<om::lever::SerialLeverHandle, 2> levers{};
+  bool start_render{};
 };
 
 }
