@@ -353,7 +353,7 @@ void pump::set_address(PumpHandle pump, int address) {
   push_pending_command(cmd);
 }
 
-void pump::run_dispense_program(PumpHandle pump) {
+void pump::run_dispense_program(PumpHandle pump){
   auto cmd = make_run_program_command(pump);
   apply_to_desired_state(pump, cmd);
   push_pending_command(cmd);

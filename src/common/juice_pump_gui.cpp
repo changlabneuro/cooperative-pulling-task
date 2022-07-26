@@ -29,6 +29,7 @@ gui::JuicePumpGUIResult gui::render_juice_pump_gui(const JuicePumpGUIParams& par
 
   for (int i = 0; i < om::pump::num_initialized_pumps(); i++) {
     auto pump_handle = om::pump::ith_pump(i);
+    float vol{};
 
     std::string handle_label{"Pump"};
     handle_label += std::to_string(pump_handle.index);

@@ -27,6 +27,11 @@ struct DelayState {
   float total_time;
 };
 
+struct InnerDelayState {
+  TimePoint t0;
+  float total_time;
+};
+
 NewTrialResult tick_new_trial(NewTrialState* state, bool* entry);
 bool tick_delay(DelayState* state, bool* entry);
 
