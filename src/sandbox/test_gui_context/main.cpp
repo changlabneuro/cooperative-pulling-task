@@ -27,6 +27,7 @@ struct App : public om::App {
     ::task_update(*this);
   }
   
+  // variable that can be changed accordingly for each session. - Weikang
 
   int lever_force_limits[2]{0, 250};
   om::lever::PullDetect detect_pull[2]{};
@@ -45,6 +46,9 @@ struct App : public om::App {
   om::Vec3f stim1_color{1.0f};
 
   int trialnumber{ 0 };
+
+  bool fixedvolume{true}; // true, if use same reward volume across trials; false, if change reward volume in the following "rewardvol" variable - WS
+  float rewardvol{ 0.2f };
 
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
 };
@@ -167,7 +171,8 @@ void task_update(App& app) {
   static NewTrialState new_trial{};
   static DelayState delay{};
   static InnerDelayState innerdelay{};
-
+  static bool setvols_cue{false};
+  static bool setvols_pull{ true };
 
   for (int i = 0; i < 2; i++) {
     const auto lh = app.levers[i];
@@ -181,17 +186,33 @@ void task_update(App& app) {
         app.invert_lever_position[i]);
       auto pull_res = om::lever::detect_pull(&pd, params);
       if (pull_res.pulled_lever && app.debug_audio_buffer) {
-      // if (pull_res.pulled_lever && app.debug_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 0)  -WS
+      // if (pull_res.pulled_lever && app.debug_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
         //om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
-
-        auto pump_handle = om::pump::ith_pump(i); // pump id: 0 - pump 1; 1 - pump 2  -WS
-        float vol{};
-        //om::pump::set_dispensed_volume(pump_handle, vol, om::pump::VolumeUnits(0));
-        om::pump::run_dispense_program(pump_handle);
-
-        state = 1;
-        entry = true; // end the trial when the one of the juice is delivered  - WS
-        break;
+        if (!app.fixedvolume) {
+          auto pump_handle = om::pump::ith_pump(i); // pump id: 0 - pump 1; 1 - pump 2  -WS
+          if (setvols_pull) {
+            om::pump::set_dispensed_volume(pump_handle, app.rewardvol, om::pump::VolumeUnits(0));
+            setvols_pull = false;
+          }
+          else {
+            if (pd.is_high) {
+              om::pump::run_dispense_program(pump_handle);
+              state = 1;
+              entry = true;
+              setvols_pull = true;
+              break;
+            }
+          }
+        }
+        else {
+          if (pd.is_high) {
+            auto pump_handle = om::pump::ith_pump(i); // pump id: 0 - pump 1; 1 - pump 2  -WS
+            om::pump::run_dispense_program(pump_handle);
+            state = 1;
+            entry = true; // end the trial when the one of the juice is delivered  - WS
+            break;
+          }
+        }
       }
     }
   }
@@ -207,33 +228,32 @@ void task_update(App& app) {
       new_trial.stim1_offset = app.stim1_offset;
       new_trial.stim1_size = app.stim1_size;
 
-      //if (entry && app.allow_automated_juice_delivery) {
-      //  auto pump_handle = om::pump::ith_pump(1); // pump id: 0 - pump 1; 1 - pump 2
-      //  om::pump::run_dispense_program(pump_handle);
-      //}
 
-      // deliver juice when task cues are on; only used for training
-      if (entry) {
-        float vol1{0.1f};
-        auto pump_handle1 = om::pump::ith_pump(0); // pump id: 0 - pump 1; 1 - pump 2
-        //if (app.trialnumber == 0 && vol1 > 0) {
-          om::pump::set_dispensed_volume(pump_handle1, vol1, om::pump::VolumeUnits(0));
-          //innerdelay.total_time = 0.5f;
-          //innerdelay.t0 = now();
-          //float ttt = elapsed_time(innerdelay.t0, now());
-          //while (elapsed_time(innerdelay.t0, now()) <= innerdelay.total_time) { 
-           // continue; 
-          //}
-        //}
-        om::pump::run_dispense_program(pump_handle1);
-        //
-        float vol2{0.1f};
-        auto pump_handle2 = om::pump::ith_pump(1); // pump id: 0 - pump 1; 1 - pump 2
-        //if (app.trialnumber == 0 && vol1 > 0) {
-        //  om::pump::set_dispensed_volume(pump_handle2, vol2, om::pump::VolumeUnits(0));
-        //}
-        om::pump::run_dispense_program(pump_handle2);
+      if (entry && app.allow_automated_juice_delivery) {
+        auto pump_handle = om::pump::ith_pump(1); // pump id: 0 - pump 1; 1 - pump 2
+        om::pump::run_dispense_program(pump_handle);
       }
+
+      // set volume as 0.1ml and deliver juice when task cues are on; only used for training
+      if (0) {
+        if (entry) {
+          float vol1{ 0.1f };
+          auto pump_handle1 = om::pump::ith_pump(0); // pump id: 0 - pump 1; 1 - pump 2
+          om::pump::set_dispensed_volume(pump_handle1, vol1, om::pump::VolumeUnits(0));
+          float vol2{ 0.1f };
+          auto pump_handle2 = om::pump::ith_pump(1); // pump id: 0 - pump 1; 1 - pump 2
+          om::pump::set_dispensed_volume(pump_handle2, vol2, om::pump::VolumeUnits(0));
+          setvols_cue = true;
+        }
+        if (!entry && setvols_cue) {
+          auto pump_handle1 = om::pump::ith_pump(0);
+          om::pump::run_dispense_program(pump_handle1);
+          auto pump_handle2 = om::pump::ith_pump(1);
+          om::pump::run_dispense_program(pump_handle2);
+          setvols_cue = false;
+        }
+      }
+
 
       auto nt_res = tick_new_trial(&new_trial, &entry);
       if (nt_res.finished) {
@@ -241,10 +261,9 @@ void task_update(App& app) {
         entry = true;
         app.trialnumber = app.trialnumber + 1;
       }
-
-
       break;
     }
+
     case 1: {
       delay.total_time = 2.0f; // 2.0f
       if (tick_delay(&delay, &entry)) {
