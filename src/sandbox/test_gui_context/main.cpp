@@ -7,6 +7,7 @@
 #include "training.hpp"
 #include <imgui.h>
 #include <Windows.h>
+#include <time.h>
 
 
 struct App;
@@ -27,36 +28,61 @@ struct App : public om::App {
     ::task_update(*this);
   }
   
-  // variable that can be changed accordingly for each session. - Weikang
+  // Variable initiation
+  // Some of these variable can be changed accordingly for each session. - Weikang
 
-  int lever_force_limits[2]{0, 250};
+  // juice volume condition
+  bool fixedvolume{ true }; // true, if use same reward volume across trials (set from the GUI); false, if change reward volume in the following "rewardvol" variable - WS
+  float rewardvol{ 0.1f };
+
+  // lever force setting condition
+  bool allow_auto_lever_force_set{false}; // true, if use force as below; false, if manually select force level on the GUI. - WS
+  float normalforce{150.0f};
+  float releaseforce{350.0f};
+
+  bool allow_automated_juice_delivery{};
+
+  int lever_force_limits[2]{0, 550};
   om::lever::PullDetect detect_pull[2]{};
   // float lever_position_limits[2]{25e3f, 33e3f};
   float lever_position_limits[4]{ 64e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
   bool invert_lever_position[2]{true, false};
   
-  bool allow_automated_juice_delivery{};
+  
 
   float new_total_time{10.0f};
   om::Vec2f stim0_size{0.15f};
   om::Vec2f stim0_offset{-0.4f, 0.0f};
-  om::Vec3f stim0_color{1.0f};
+  om::Vec3f stim0_color{ 1.0f };
+  om::Vec3f stim0_color_noreward{1.0f, 1.0f, 0.0f};
   om::Vec2f stim1_size{0.15f};
   om::Vec2f stim1_offset{0.4f, 0.0f};
   om::Vec3f stim1_color{1.0f};
+  om::Vec3f stim1_color_noreward{1.0f, 1.0f, 0.0f };
 
+  // variables that are updated every trial
   int trialnumber{ 0 };
+  bool getreward{false};
 
-  bool fixedvolume{true}; // true, if use same reward volume across trials; false, if change reward volume in the following "rewardvol" variable - WS
-  float rewardvol{ 0.2f };
+  int tasktype{ 1 };
+  // int tasktype{rand()%2}; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
+  // int tasktype{ rand()%4}; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
 
+  //
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
 };
 
 void setup(App& app) {
   //auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
-  auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-09.wav";
-  app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+  //app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+  if (app.tasktype == 0) {
+    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-04.wav";
+    app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+  }
+  else if (app.tasktype == 1) {
+    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-09.wav";
+    app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+  }
 
   const float dflt_rising_edge = 0.6f;
   const float dflt_falling_edge = 0.25f;
@@ -64,6 +90,12 @@ void setup(App& app) {
   app.detect_pull[1].rising_edge = dflt_rising_edge;
   app.detect_pull[0].falling_edge = dflt_falling_edge;
   app.detect_pull[1].falling_edge = dflt_falling_edge;
+
+  // initialize lever force
+  if (app.allow_auto_lever_force_set) {
+    om::lever::set_force(om::lever::get_global_lever_system(), app.levers[0], app.normalforce);
+    om::lever::set_force(om::lever::get_global_lever_system(), app.levers[1], app.normalforce);
+  }
 }
 
 void render_lever_gui(App& app) {
@@ -118,7 +150,11 @@ void render_gui(App& app) {
   render_lever_gui(app);
 
   if (ImGui::TreeNode("PullDetect")) {
-    ImGui::InputFloat2("PositionLimits", app.lever_position_limits);
+    //ImGui::InputFloat2("PositionLimits", app.lever_position_limits);
+    float lever_position_limits0[2]{app.lever_position_limits[0],app.lever_position_limits[1]};
+    float lever_position_limits1[2]{app.lever_position_limits[2],app.lever_position_limits[3]};
+    ImGui::InputFloat2("PositionLimits0", lever_position_limits0);
+    ImGui::InputFloat2("PositionLimits1", lever_position_limits1);
 
     auto& detect = app.detect_pull;
     if (ImGui::InputFloat("RisingEdge", &detect[0].rising_edge, 0.0f, 0.0f, "%0.3f", enter_flag)) {
@@ -172,7 +208,8 @@ void task_update(App& app) {
   static DelayState delay{};
   static InnerDelayState innerdelay{};
   static bool setvols_cue{false};
-  static bool setvols_pull{ true };
+  static bool setvols_pull{true};
+
 
   for (int i = 0; i < 2; i++) {
     const auto lh = app.levers[i];
@@ -185,9 +222,13 @@ void task_update(App& app) {
         app.lever_position_limits[2*i+1],
         app.invert_lever_position[i]);
       auto pull_res = om::lever::detect_pull(&pd, params);
-      if (pull_res.pulled_lever && app.debug_audio_buffer) {
+      if (pull_res.pulled_lever && app.debug_audio_buffer && app.tasktype!=0) {
       // if (pull_res.pulled_lever && app.debug_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
-        //om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
+        // play sound after pulli
+        auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-08b.wav";
+        app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+        om::audio::play_buffer(app.debug_audio_buffer.value(), 0.25f);
+
         if (!app.fixedvolume) {
           auto pump_handle = om::pump::ith_pump(i); // pump id: 0 - pump 1; 1 - pump 2  -WS
           if (setvols_pull) {
@@ -195,21 +236,31 @@ void task_update(App& app) {
             setvols_pull = false;
           }
           else {
-            if (pd.is_high) {
+            if (!app.getreward) {
               om::pump::run_dispense_program(pump_handle);
               state = 1;
               entry = true;
               setvols_pull = true;
+              app.getreward = true;
+              // high lever force to make the animal release the lever
+              if (app.allow_auto_lever_force_set) {
+                om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
+              }
               break;
             }
           }
         }
         else {
-          if (pd.is_high) {
+          if (!app.getreward) {
             auto pump_handle = om::pump::ith_pump(i); // pump id: 0 - pump 1; 1 - pump 2  -WS
             om::pump::run_dispense_program(pump_handle);
             state = 1;
             entry = true; // end the trial when the one of the juice is delivered  - WS
+            app.getreward = true;
+            // high lever force to make the animal release the lever 
+            if (app.allow_auto_lever_force_set) {
+              om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
+            }
             break;
           }
         }
@@ -221,13 +272,17 @@ void task_update(App& app) {
     case 0: {
       new_trial.play_sound_on_entry = app.debug_audio_buffer;
       new_trial.total_time = app.new_total_time;
-      new_trial.stim0_color = app.stim0_color;
       new_trial.stim0_offset = app.stim0_offset;
       new_trial.stim0_size = app.stim0_size;
-      new_trial.stim1_color = app.stim1_color;
       new_trial.stim1_offset = app.stim1_offset;
       new_trial.stim1_size = app.stim1_size;
-
+      if (app.tasktype == 0) {
+        new_trial.stim0_color = app.stim0_color_noreward;
+        new_trial.stim1_color = app.stim1_color_noreward;
+      } else if (app.tasktype == 1) {
+        new_trial.stim0_color = app.stim0_color;
+        new_trial.stim1_color = app.stim1_color;
+      }
 
       if (entry && app.allow_automated_juice_delivery) {
         auto pump_handle = om::pump::ith_pump(1); // pump id: 0 - pump 1; 1 - pump 2
@@ -258,8 +313,7 @@ void task_update(App& app) {
       auto nt_res = tick_new_trial(&new_trial, &entry);
       if (nt_res.finished) {
         state = 1;
-        entry = true;
-        app.trialnumber = app.trialnumber + 1;
+        entry = true;  
       }
       break;
     }
@@ -269,7 +323,31 @@ void task_update(App& app) {
       if (tick_delay(&delay, &entry)) {
         state = 0;
         entry = true;
-      }
+        app.trialnumber = app.trialnumber + 1;
+        app.tasktype = 1;
+        // app.tasktype = rand()%2;
+        // app.tasktype = rand()%4;
+        // app.getreward = false; // uncomment if only receive reward when the cue is on
+
+        // change beep sound for new trials
+        if (app.tasktype == 0) {
+          auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-04.wav";
+          app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+        }
+        else if (app.tasktype == 1) {
+          auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-09.wav";
+          app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+        }
+
+        // push the lever force back to normal
+        if (app.allow_auto_lever_force_set) {
+          om::lever::set_force(om::lever::get_global_lever_system(), app.levers[0], app.normalforce);
+          om::lever::set_force(om::lever::get_global_lever_system(), app.levers[1], app.normalforce);
+        }
+      }     
+      app.getreward = false; // comment if only receive reward when the cue is on
+
+
       break;
     }
     default: {
@@ -279,6 +357,7 @@ void task_update(App& app) {
 }
 
 int main(int, char**) {
+  srand(time(NULL));
   auto app = std::make_unique<App>();
   return app->run();
 }
