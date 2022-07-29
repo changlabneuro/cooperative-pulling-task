@@ -9,6 +9,8 @@
 #include <Windows.h>
 #include <time.h>
 #include <thread>
+#include <iostream>
+#include <fstream>
 
 
 struct App;
@@ -78,10 +80,14 @@ struct App : public om::App {
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
   std::optional<om::audio::BufferHandle> start_trial_audio_buffer;
   std::optional<om::audio::BufferHandle> sucessful_pull_audio_buffer;
+
+  std::ofstream save_trial_data_file;
 };
 
 
 void setup(App& app) {
+
+  
   //auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
   //app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
   if (app.tasktype == 0) {
@@ -382,6 +388,15 @@ void task_update(App& app) {
         app.timepoint = elapsed_time(app.trialstart_time, now());
         app.behavior_event = 9; // end of a trial
         // app.getreward = false; // uncomment if only receive reward when the cue is on
+
+        // save some data
+        app.save_trial_data_file.open ("trial_data.csv");
+        app.save_trial_data_file << app.trialnumber << ";" << int(app.getreward) << ";" << app.tasktype << std::endl;
+        app.save_trial_data_file << "This is the first cell in the first column.\n" << std::endl;
+        app.save_trial_data_file << "a,b,c,\n" << std::endl;
+        app.save_trial_data_file << "c,s,v,\n" << std::endl;
+        //app.save_trial_data_file.close();
+
       }     
       app.getreward = false; // comment if only receive reward when the cue is on
 
