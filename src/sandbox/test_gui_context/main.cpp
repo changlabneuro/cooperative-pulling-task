@@ -392,10 +392,7 @@ void task_update(App& app) {
         // save some data
         app.save_trial_data_file.open ("trial_data.csv");
         app.save_trial_data_file << app.trialnumber << ";" << int(app.getreward) << ";" << app.tasktype << std::endl;
-        app.save_trial_data_file << "This is the first cell in the first column.\n" << std::endl;
-        app.save_trial_data_file << "a,b,c,\n" << std::endl;
-        app.save_trial_data_file << "c,s,v,\n" << std::endl;
-        //app.save_trial_data_file.close();
+        app.save_trial_data_file.close();
 
       }     
       app.getreward = false; // comment if only receive reward when the cue is on
