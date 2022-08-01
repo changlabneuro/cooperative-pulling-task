@@ -24,6 +24,7 @@ void setup(App& app);
 void shutdown(App& app);
 
 struct TrialRecord {
+  std::time_t trial_start_time_stamp;
   int trial_number;
   int rewarded;
   int task_type; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
@@ -96,6 +97,7 @@ struct App : public om::App {
 
   double timepoint{};
   om::TimePoint trialstart_time;
+  std::chrono::system_clock::time_point trial_start_time_forsave;
   int behavior_event{}; // 0 - trial starts; 9 - trial ends; 1 - lever 1 is pulled; 2 - lever 2 is pulled; 3 - pump 1 delivery; 4 - pump 2 delivery; etc
 
 
@@ -124,6 +126,7 @@ json to_json(const TrialRecord& trial) {
   result["trial_number"] = trial.trial_number;
   result["rewarded"] = trial.rewarded;
   result["task_type"] = trial.task_type;
+  result["trial_starttime"] = trial.trial_start_time_stamp;
 
   return result;
 }
@@ -325,6 +328,7 @@ void task_update(App& app) {
     //
     app.timepoint = 0;
     app.trialstart_time = now();
+    app.trial_start_time_forsave = std::chrono::system_clock::now();
     app.behavior_event = 0; // start of a trial
     BehaviorData time_stamps{};
     time_stamps.trial_number = app.trialnumber;
@@ -599,6 +603,7 @@ void task_update(App& app) {
       trial_record.trial_number = app.trialnumber;
       trial_record.rewarded = app.rewarded;
       trial_record.task_type = app.tasktype;
+      trial_record.trial_start_time_stamp = std::chrono::system_clock::to_time_t(app.trial_start_time_forsave);
       //  Add to the array of trials.
       app.trial_records.push_back(trial_record);
       state = 0;
