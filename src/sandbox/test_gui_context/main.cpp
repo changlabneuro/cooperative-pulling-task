@@ -13,13 +13,14 @@
 #include <iostream>
 #include <fstream>
 
+using json = nlohmann::json;
 
 struct App;
 
 void render_gui(App& app);
 void task_update(App& app);
 void setup(App& app);
-
+void shutdown(App& app);
 
 struct TrialRecord {
   int trial_number;
@@ -45,6 +46,9 @@ struct App : public om::App {
   }
   void task_update() override {
     ::task_update(*this);
+  }
+  void shutdown() override {
+    ::shutdown(*this);
   }
   
   // Variable initiation
@@ -146,6 +150,9 @@ void setup(App& app) {
   }
 }
 
+void shutdown(App& app) {
+  (void) app;
+}
 
 void render_lever_gui(App& app) {
   om::gui::LeverGUIParams gui_params{};
@@ -446,9 +453,6 @@ void task_update(App& app) {
 
 
 int main(int, char**) {
-
-  using json = nlohmann::json;
-
   srand(time(NULL));
   auto app = std::make_unique<App>();
   return app->run();

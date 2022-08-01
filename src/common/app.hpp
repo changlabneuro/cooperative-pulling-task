@@ -11,6 +11,7 @@ struct App {
   virtual void gui_update() {}
   virtual void task_update() {}
   virtual void setup() {}
+  virtual void shutdown() {}
   int run();
 
   std::vector<om::PortDescriptor> ports;

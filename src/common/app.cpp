@@ -81,6 +81,8 @@ int App::run() {
     }
   }
 
+  shutdown();
+
   om::audio::terminate_audio();
   om::gfx::terminate_rendering();
   om::lever::terminate(lever_sys);
