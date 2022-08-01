@@ -26,7 +26,7 @@ void shutdown(App& app);
 struct TrialRecord {
   int trial_number;
   int rewarded;
-  int task_type; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
+  int task_type; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
 };
 
 struct BehaviorData {
@@ -74,7 +74,7 @@ struct App : public om::App {
   int lever_force_limits[2]{0, 550};
   om::lever::PullDetect detect_pull[2]{};
   // float lever_position_limits[2]{25e3f, 33e3f};
-  float lever_position_limits[4]{ 64e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
+  float lever_position_limits[4]{ 64.5e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
   bool invert_lever_position[2]{true, false};
   
   float new_delay_time{2.0f};
@@ -100,8 +100,9 @@ struct App : public om::App {
 
 
   int tasktype{ 1 };
-  // int tasktype{rand()%2}; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
-  // int tasktype{ rand()%4}; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
+  // int tasktype{rand()%2}; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
+  // int tasktype{ rand()%4}; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
+  bool leverpulled[2]{ false, false };
 
   //
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
@@ -164,7 +165,7 @@ void setup(App& app) {
     auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-04.wav";
     app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
   }
-  else if (app.tasktype == 1) {
+  else if (app.tasktype == 1 || app.tasktype == 4) {
     auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-09.wav";
     app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
   }
@@ -316,9 +317,9 @@ void task_update(App& app) {
   if (entry && state == 0) {
     
     app.trialnumber = app.trialnumber + 1;
-    app.tasktype = 1;
-    // app.tasktype = rand()%2; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
-   // app.tasktype = rand()%4; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
+    app.tasktype = 4;
+    // app.tasktype = rand()%2; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
+   // app.tasktype = rand()%4; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
     app.rewarded = 0;
     
     //
@@ -336,7 +337,7 @@ void task_update(App& app) {
       auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-04.wav";
       app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
     }
-    else if (app.tasktype == 1) {
+    else if (app.tasktype == 1 || app.tasktype == 4) {
       auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-09.wav";
       app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
     }
@@ -351,7 +352,7 @@ void task_update(App& app) {
 
   // check lever pulling anytime during the trial
   // none cooperation condition
-  if (app.tasktype != 3) {
+  if (app.tasktype != 3 && app.tasktype != 4) {
     for (int i = 0; i < 2; i++) {
       const auto lh = app.levers[i];
       auto& pd = app.detect_pull[i];
@@ -364,7 +365,7 @@ void task_update(App& app) {
           app.invert_lever_position[i]);
         auto pull_res = om::lever::detect_pull(&pd, params);
         if (pull_res.pulled_lever && app.tasktype != 0) {
-          // if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
+        // if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
             // play sound after pulling
             // om::audio::play_buffer(app.sucessful_pull_audio_buffer.value(), 0.25f);
 
@@ -435,6 +436,90 @@ void task_update(App& app) {
       }
     }
   }
+  else if (app.tasktype == 4) {
+    for (int i = 0; i < 2; i++) {
+      const auto lh = app.levers[i];
+      auto& pd = app.detect_pull[i];
+      if (auto lever_state = om::lever::get_state(om::lever::get_global_lever_system(), lh)) {
+        om::lever::PullDetectParams params{};
+        params.current_position = to_normalized(
+          lever_state.value().potentiometer_reading,
+          app.lever_position_limits[2 * i],
+          app.lever_position_limits[2 * i + 1],
+          app.invert_lever_position[i]);
+        auto pull_res = om::lever::detect_pull(&pd, params);
+        if (pull_res.pulled_lever && app.tasktype != 0) {
+        // if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
+        
+          app.timepoint = elapsed_time(app.trialstart_time, now());
+          app.behavior_event = i + 1; // lever i+1 (1 or 2) is pulled
+          BehaviorData time_stamps{};
+          time_stamps.trial_number = app.trialnumber;
+          time_stamps.time_points = app.timepoint;
+          time_stamps.behavior_events = app.behavior_event;
+          app.behavior_data.push_back(time_stamps);
+
+          if (!app.fixedvolume && !app.leverpulled[i]) {
+            auto pump_handle = om::pump::ith_pump(abs(i)); // pump id: 0 - pump 1; 1 - pump 2  -W
+            if (setvols_pull) {
+              om::pump::set_dispensed_volume(pump_handle, app.rewardvol, om::pump::VolumeUnits(0));
+              setvols_pull = false;
+            }
+            else {
+              if (!app.getreward || app.getreward) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                om::pump::run_dispense_program(pump_handle);
+                //state = 1;
+                //entry = true;
+                setvols_pull = true;
+                app.getreward = true;
+                app.rewarded = 1;
+                // high lever force to make the animal release the lever
+                if (app.allow_auto_lever_force_set) {
+                  om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
+                }
+                app.timepoint = elapsed_time(app.trialstart_time, now());
+                if (app.tasktype == 1) {
+                  app.behavior_event = i + 3; // pump 1 or 2 deliver
+                  BehaviorData time_stamps{};
+                  time_stamps.trial_number = app.trialnumber;
+                  time_stamps.time_points = app.timepoint;
+                  time_stamps.behavior_events = app.behavior_event;
+                  app.behavior_data.push_back(time_stamps);
+                }
+                //break;
+              }
+            }
+          }
+          else if (!app.leverpulled[i]) {
+            if (!app.getreward || app.getreward) {
+              auto pump_handle = om::pump::ith_pump(abs(i)); // pump id: 0 - pump 1; 1 - pump 2  -WS
+              std::this_thread::sleep_for(std::chrono::milliseconds(250));
+              om::pump::run_dispense_program(pump_handle);
+              //state = 1;
+              //entry = true; // end the trial when the one of the juice is delivered  - WS
+              app.getreward = true;
+              app.rewarded = 1;
+              // high lever force to make the animal release the lever 
+              if (app.allow_auto_lever_force_set) {
+                om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
+              }
+              app.timepoint = elapsed_time(app.trialstart_time, now());
+              app.behavior_event = abs(i) + 3; // pump 1 or 2 deliver  
+              BehaviorData time_stamps{};
+              time_stamps.trial_number = app.trialnumber;
+              time_stamps.time_points = app.timepoint;
+              time_stamps.behavior_events = app.behavior_event;
+              app.behavior_data.push_back(time_stamps);
+              //break;
+            }
+          }
+          
+          app.leverpulled[i] = true;
+        }
+      }
+    }
+  }
 
   switch (state) {
     case 0: {
@@ -491,6 +576,8 @@ void task_update(App& app) {
       if (tick_delay(&delay, &entry)) {
         state = 2;
         entry = true;
+        app.leverpulled[0] = false;
+        app.leverpulled[1] = false;
         app.timepoint = elapsed_time(app.trialstart_time, now());
         app.behavior_event = 9; // end of a trial
         BehaviorData time_stamps{};
