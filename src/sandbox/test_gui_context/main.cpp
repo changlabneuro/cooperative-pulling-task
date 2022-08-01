@@ -5,6 +5,7 @@
 #include "common/common.hpp"
 #include "common/juice_pump.hpp"
 #include "training.hpp"
+#include "nlohmann/json.hpp"
 #include <imgui.h>
 #include <Windows.h>
 #include <time.h>
@@ -18,6 +19,21 @@ struct App;
 void render_gui(App& app);
 void task_update(App& app);
 void setup(App& app);
+
+
+struct TrialRecord {
+  int trial_number;
+  bool rewarded;
+  int task_type; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
+};
+
+struct BehaviorData {
+  float time_points;
+  int behavior_events;
+};
+
+struct LeverReadout {}; // under construction ... -WS
+
 
 struct App : public om::App {
   ~App() override = default;
@@ -82,7 +98,22 @@ struct App : public om::App {
   std::optional<om::audio::BufferHandle> sucessful_pull_audio_buffer;
 
   std::ofstream save_trial_data_file;
+
+  // struct for saving data
+  std::vector<TrialRecord> trial_records;
+  std::vector<BehaviorData> behavior_data;
+  std::vector<LeverReadout> lever_readout;
+
 };
+
+
+json to_json(const TrialRecord& trial) {
+  json result;
+  result["trial_number"] = trial.trial_number;
+  result["rewarded"] = trial.rewarded;
+
+  return result;
+}
 
 
 void setup(App& app) {
@@ -383,23 +414,29 @@ void task_update(App& app) {
     case 1: {
       delay.total_time = app.new_delay_time; // 2.0f
       if (tick_delay(&delay, &entry)) {
-        state = 0;
+        state = 2;
         entry = true;
         app.timepoint = elapsed_time(app.trialstart_time, now());
         app.behavior_event = 9; // end of a trial
         // app.getreward = false; // uncomment if only receive reward when the cue is on
-
-        // save some data
-        app.save_trial_data_file.open ("trial_data.csv");
-        app.save_trial_data_file << app.trialnumber << ";" << int(app.getreward) << ";" << app.tasktype << std::endl;
-        app.save_trial_data_file.close();
-
       }     
       app.getreward = false; // comment if only receive reward when the cue is on
+    }
 
+    // save some data
+    case 2: {
 
+      TrialRecord trial_record{};
+      trial_record.trial_number = app.trialnumber;
+      trial_record.rewarded = int(app.getreward);
+      trial_record.task_type = app.tasktype;
+      //  Add to the array of trials.
+      app.trial_records.push_back(trial_record);
+      state = 0;
+      entry = true;
       break;
     }
+
     default: {
       assert(false);
     }
@@ -407,7 +444,11 @@ void task_update(App& app) {
 }
 
 
+
 int main(int, char**) {
+
+  using json = nlohmann::json;
+
   srand(time(NULL));
   auto app = std::make_unique<App>();
   return app->run();
