@@ -115,7 +115,16 @@ json to_json(const TrialRecord& trial) {
   json result;
   result["trial_number"] = trial.trial_number;
   result["rewarded"] = trial.rewarded;
+  result["task_type"] = trial.task_type;
 
+  return result;
+}
+
+json to_json(const std::vector<TrialRecord>& records) {
+  json result;
+  for (auto& record : records) {
+    result.push_back(to_json(record));
+  }
   return result;
 }
 
@@ -152,6 +161,8 @@ void setup(App& app) {
 
 void shutdown(App& app) {
   (void) app;
+  std::ofstream output_file("some_filename.json");
+  output_file << to_json(app.trial_records);
 }
 
 void render_lever_gui(App& app) {
@@ -456,5 +467,7 @@ int main(int, char**) {
   srand(time(NULL));
   auto app = std::make_unique<App>();
   return app->run();
+
+ 
 }
 
