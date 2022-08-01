@@ -211,6 +211,12 @@ std::optional<BufferHandle> create_buffer(const float* data, double sr, int chan
 }
 
 std::optional<BufferHandle> read_buffer(const char* filepath) {
+  static std::unordered_map<std::string, BufferHandle> handle_cache;
+
+  if (auto it = handle_cache.find(std::string{filepath}); it != handle_cache.end()) {
+    return it->second;
+  }
+
   AudioFile<float> file;
 
   try {
@@ -232,7 +238,11 @@ std::optional<BufferHandle> read_buffer(const char* filepath) {
     }
   }
 
-  return create_buffer(data.data(), file.getSampleRate(), num_channels, spc);
+  auto res = create_buffer(data.data(), file.getSampleRate(), num_channels, spc);
+  if (res) {
+    handle_cache[std::string{filepath}] = res.value();
+  }
+  return res;
 }
 
 bool play_buffer(BufferHandle buff, float gain) {
