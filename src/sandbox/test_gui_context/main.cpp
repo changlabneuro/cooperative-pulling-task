@@ -142,8 +142,8 @@ void setup(App& app) {
     auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-09.wav";
     app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
   }
-  auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-08b.wav";
-  app.sucessful_pull_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+  //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-08b.wav";
+  //app.sucessful_pull_audio_buffer = om::audio::read_buffer(buff_p.c_str());
 
   const float dflt_rising_edge = 0.6f;
   const float dflt_falling_edge = 0.25f;
