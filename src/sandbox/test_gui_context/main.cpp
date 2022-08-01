@@ -4,6 +4,7 @@
 #include "common/lever_pull.hpp"
 #include "common/common.hpp"
 #include "common/juice_pump.hpp"
+#include "common/random.hpp"
 #include "training.hpp"
 #include "nlohmann/json.hpp"
 #include <imgui.h>
