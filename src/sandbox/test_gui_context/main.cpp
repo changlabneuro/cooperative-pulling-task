@@ -25,12 +25,13 @@ void shutdown(App& app);
 
 struct TrialRecord {
   int trial_number;
-  bool rewarded;
+  int rewarded;
   int task_type; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
 };
 
 struct BehaviorData {
-  float time_points;
+  int trial_number;
+  double time_points;
   int behavior_events;
 };
 
@@ -55,13 +56,17 @@ struct App : public om::App {
   // Variable initiation
   // Some of these variable can be changed accordingly for each session. - Weikang
 
+  // file name
+  std::string trialrecords_name{"20220801_Dodson_Scorch_TrialRecord_1.json"};
+  std::string bhvdata_name{ "20220801_Dodson_Scorch_bhv_data_1.json" };
+
   // juice volume condition
   bool fixedvolume{ true }; // true, if use same reward volume across trials (set from the GUI); false, if change reward volume in the following "rewardvol" variable - WS
   float rewardvol{ 0.1f };
 
   // lever force setting condition
   bool allow_auto_lever_force_set{true}; // true, if use force as below; false, if manually select force level on the GUI. - WS
-  float normalforce{130.0f};
+  float normalforce{ 130.0f };
   float releaseforce{350.0f};
 
   bool allow_automated_juice_delivery{};
@@ -87,6 +92,7 @@ struct App : public om::App {
   // variables that are updated every trial
   int trialnumber{ 0 };
   bool getreward{false};
+  int rewarded{ 0 }; 
 
   double timepoint{};
   om::TimePoint trialstart_time;
@@ -111,7 +117,7 @@ struct App : public om::App {
 
 };
 
-
+// save data for Trial Record
 json to_json(const TrialRecord& trial) {
   json result;
   result["trial_number"] = trial.trial_number;
@@ -129,6 +135,25 @@ json to_json(const std::vector<TrialRecord>& records) {
   return result;
 }
 
+// save data for behavior data
+json to_json(const BehaviorData& bhv_data) {
+  json result;
+  result["trial_number"] = bhv_data.trial_number;
+  result["time_points"] = bhv_data.time_points;
+  result["behavior_events"] = bhv_data.behavior_events;
+ 
+  return result;
+}
+
+json to_json(const std::vector<BehaviorData>& time_stamps) {
+  json result;
+  for (auto& time_stamp : time_stamps) {
+    result.push_back(to_json(time_stamp));
+  }
+  return result;
+}
+
+
 
 void setup(App& app) {
 
@@ -143,8 +168,8 @@ void setup(App& app) {
     auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-09.wav";
     app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
   }
-  //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-08b.wav";
-  //app.sucessful_pull_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+  auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-08b.wav";
+  app.sucessful_pull_audio_buffer = om::audio::read_buffer(buff_p.c_str());
 
   const float dflt_rising_edge = 0.6f;
   const float dflt_falling_edge = 0.25f;
@@ -162,8 +187,13 @@ void setup(App& app) {
 
 void shutdown(App& app) {
   (void) app;
-  std::ofstream output_file("some_filename.json");
-  output_file << to_json(app.trial_records);
+  std::string file_path1 = std::string{ OM_DATA_DIR } +"/" + app.trialrecords_name;
+  std::ofstream output_file1(file_path1);
+  output_file1 << to_json(app.trial_records);
+
+  std::string file_path2 = std::string{ OM_DATA_DIR } + "/" + app.bhvdata_name;
+  std::ofstream output_file2(file_path2);
+  output_file2 << to_json(app.behavior_data);
 }
 
 void render_lever_gui(App& app) {
@@ -284,13 +314,22 @@ void task_update(App& app) {
   //
   // renew for every new trial
   if (entry && state == 0) {
+    
+    app.trialnumber = app.trialnumber + 1;
+    app.tasktype = 1;
+    // app.tasktype = rand()%2; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
+   // app.tasktype = rand()%4; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet)
+    app.rewarded = 0;
+    
+    //
     app.timepoint = 0;
     app.trialstart_time = now();
     app.behavior_event = 0; // start of a trial
-    app.trialnumber = app.trialnumber + 1;
-    app.tasktype = 1;
-    // app.tasktype = rand()%2;
-    // app.tasktype = rand()%4;
+    BehaviorData time_stamps{};
+    time_stamps.trial_number = app.trialnumber;
+    time_stamps.time_points = app.timepoint;
+    time_stamps.behavior_events = app.behavior_event;
+    app.behavior_data.push_back(time_stamps);
 
     // change beep sound for new trials
     if (app.tasktype == 0) {
@@ -331,6 +370,11 @@ void task_update(App& app) {
 
           app.timepoint = elapsed_time(app.trialstart_time, now());
           app.behavior_event = i + 1; // lever i+1 (1 or 2) is pulled
+          BehaviorData time_stamps{};
+          time_stamps.trial_number = app.trialnumber;
+          time_stamps.time_points = app.timepoint;
+          time_stamps.behavior_events = app.behavior_event;
+          app.behavior_data.push_back(time_stamps);
 
           if (!app.fixedvolume) {
             auto pump_handle = om::pump::ith_pump(abs(i + 1 - app.tasktype)); // pump id: 0 - pump 1; 1 - pump 2  -W
@@ -346,6 +390,7 @@ void task_update(App& app) {
                 entry = true;
                 setvols_pull = true;
                 app.getreward = true;
+                app.rewarded = 1;
                 // high lever force to make the animal release the lever
                 if (app.allow_auto_lever_force_set) {
                   om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
@@ -353,6 +398,11 @@ void task_update(App& app) {
                 app.timepoint = elapsed_time(app.trialstart_time, now());
                 if (app.tasktype == 1) {
                   app.behavior_event = i + 3; // pump 1 or 2 deliver
+                  BehaviorData time_stamps{};
+                  time_stamps.trial_number = app.trialnumber;
+                  time_stamps.time_points = app.timepoint;
+                  time_stamps.behavior_events = app.behavior_event;
+                  app.behavior_data.push_back(time_stamps);
                 }
                 break;
               }
@@ -366,12 +416,18 @@ void task_update(App& app) {
               state = 1;
               entry = true; // end the trial when the one of the juice is delivered  - WS
               app.getreward = true;
+              app.rewarded = 1;
               // high lever force to make the animal release the lever 
               if (app.allow_auto_lever_force_set) {
                 om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
               }
               app.timepoint = elapsed_time(app.trialstart_time, now());
-              app.behavior_event = abs(i + 1 - app.tasktype) + 3; // pump 1 or 2 deliver             
+              app.behavior_event = abs(i + 1 - app.tasktype) + 3; // pump 1 or 2 deliver  
+              BehaviorData time_stamps{};
+              time_stamps.trial_number = app.trialnumber;
+              time_stamps.time_points = app.timepoint;
+              time_stamps.behavior_events = app.behavior_event;
+              app.behavior_data.push_back(time_stamps);
               break;
             }
           }
@@ -437,9 +493,16 @@ void task_update(App& app) {
         entry = true;
         app.timepoint = elapsed_time(app.trialstart_time, now());
         app.behavior_event = 9; // end of a trial
-        // app.getreward = false; // uncomment if only receive reward when the cue is on
+        BehaviorData time_stamps{};
+        time_stamps.trial_number = app.trialnumber;
+        time_stamps.time_points = app.timepoint;
+        time_stamps.behavior_events = app.behavior_event;
+        app.behavior_data.push_back(time_stamps);
+        app.getreward = false; // uncomment if only receive reward when the cue is on
       }     
-      app.getreward = false; // comment if only receive reward when the cue is on
+      // app.getreward = false; // comment if only receive reward when the cue is on
+      
+      break;
     }
 
     // save some data
@@ -447,7 +510,7 @@ void task_update(App& app) {
 
       TrialRecord trial_record{};
       trial_record.trial_number = app.trialnumber;
-      trial_record.rewarded = int(app.getreward);
+      trial_record.rewarded = app.rewarded;
       trial_record.task_type = app.tasktype;
       //  Add to the array of trials.
       app.trial_records.push_back(trial_record);
