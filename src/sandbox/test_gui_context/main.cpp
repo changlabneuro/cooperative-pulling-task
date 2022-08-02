@@ -58,8 +58,8 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string trialrecords_name{"20220801_Dodson_Scorch_TrialRecord_1.json"};
-  std::string bhvdata_name{ "20220801_Dodson_Scorch_bhv_data_1.json" };
+  std::string trialrecords_name{"20220803_Dodson_Scorch_TrialRecord_1.json"};
+  std::string bhvdata_name{ "20220803_Dodson_Scorch_bhv_data_1.json" };
 
   // juice volume condition
   bool fixedvolume{ true }; // true, if use same reward volume across trials (set from the GUI); false, if change reward volume in the following "rewardvol" variable - WS
@@ -85,10 +85,12 @@ struct App : public om::App {
   om::Vec2f stim0_offset{-0.4f, 0.0f};
   om::Vec3f stim0_color{ 1.0f };
   om::Vec3f stim0_color_noreward{1.0f, 1.0f, 0.0f};
+  om::Vec3f stim0_color_disappear{ 0.0f };
   om::Vec2f stim1_size{0.15f};
   om::Vec2f stim1_offset{0.4f, 0.0f};
   om::Vec3f stim1_color{1.0f};
   om::Vec3f stim1_color_noreward{1.0f, 1.0f, 0.0f };
+  om::Vec3f stim1_color_disappear{ 0.0f };
 
   // variables that are updated every trial
   int trialnumber{ 0 };
@@ -101,7 +103,7 @@ struct App : public om::App {
   int behavior_event{}; // 0 - trial starts; 9 - trial ends; 1 - lever 1 is pulled; 2 - lever 2 is pulled; 3 - pump 1 delivery; 4 - pump 2 delivery; etc
 
 
-  int tasktype{ 1 };
+  int tasktype{ 4 };
   // int tasktype{rand()%2}; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
   // int tasktype{ rand()%4}; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
   bool leverpulled[2]{ false, false };
@@ -324,7 +326,9 @@ void task_update(App& app) {
     // app.tasktype = rand()%2; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
    // app.tasktype = rand()%4; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
     app.rewarded = 0;
-    
+    app.leverpulled[0] = false;
+    app.leverpulled[1] = false;
+
     //
     app.timepoint = 0;
     app.trialstart_time = now();
@@ -440,7 +444,7 @@ void task_update(App& app) {
       }
     }
   }
-  else if (app.tasktype == 4) {
+  else if (app.tasktype == 4) {  
     for (int i = 0; i < 2; i++) {
       const auto lh = app.levers[i];
       auto& pd = app.detect_pull[i];
@@ -520,6 +524,13 @@ void task_update(App& app) {
           }
           
           app.leverpulled[i] = true;
+
+          if (app.leverpulled[0] && app.leverpulled[1]) {
+            state = 1;
+            entry = true;
+            break;
+          }
+
         }
       }
     }
@@ -536,10 +547,18 @@ void task_update(App& app) {
       if (app.tasktype == 0) {
         new_trial.stim0_color = app.stim0_color_noreward;
         new_trial.stim1_color = app.stim1_color_noreward;
-      } else if (app.tasktype == 1) {
+      } 
+      else if (app.tasktype == 1) {
         new_trial.stim0_color = app.stim0_color;
         new_trial.stim1_color = app.stim1_color;
       }
+      else if (app.tasktype == 4) {
+        new_trial.stim0_color = app.stim0_color;
+        new_trial.stim1_color = app.stim1_color;
+        if (app.leverpulled[0]) { new_trial.stim0_color = app.stim0_color_disappear; }
+        if (app.leverpulled[1]) { new_trial.stim1_color = app.stim1_color_disappear; }
+      }
+
 
       if (entry && app.allow_automated_juice_delivery) {
         auto pump_handle = om::pump::ith_pump(1); // pump id: 0 - pump 1; 1 - pump 2
@@ -566,6 +585,8 @@ void task_update(App& app) {
         }
       }
 
+      
+
 
       auto nt_res = tick_new_trial(&new_trial, &entry);
       if (nt_res.finished) {
@@ -580,8 +601,6 @@ void task_update(App& app) {
       if (tick_delay(&delay, &entry)) {
         state = 2;
         entry = true;
-        app.leverpulled[0] = false;
-        app.leverpulled[1] = false;
         app.timepoint = elapsed_time(app.trialstart_time, now());
         app.behavior_event = 9; // end of a trial
         BehaviorData time_stamps{};
