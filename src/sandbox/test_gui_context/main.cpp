@@ -58,8 +58,8 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string trialrecords_name{"20220803_Dodson_Scorch_TrialRecord_1.json"};
-  std::string bhvdata_name{ "20220803_Dodson_Scorch_bhv_data_1.json" };
+  std::string trialrecords_name{"20220804_Dodson_Scorch_TrialRecord_1.json"};
+  std::string bhvdata_name{ "20220804_Dodson_Scorch_bhv_data_1.json" };
 
   // juice volume condition
   bool fixedvolume{ true }; // true, if use same reward volume across trials (set from the GUI); false, if change reward volume in the following "rewardvol" variable - WS
@@ -372,8 +372,8 @@ void task_update(App& app) {
           app.lever_position_limits[2 * i + 1],
           app.invert_lever_position[i]);
         auto pull_res = om::lever::detect_pull(&pd, params);
-        if (pull_res.pulled_lever && app.tasktype != 0) {
-        // if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
+        // if (pull_res.pulled_lever && app.tasktype != 0) {
+        if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
             // play sound after pulling
             // om::audio::play_buffer(app.sucessful_pull_audio_buffer.value(), 0.25f);
 
@@ -456,8 +456,8 @@ void task_update(App& app) {
           app.lever_position_limits[2 * i + 1],
           app.invert_lever_position[i]);
         auto pull_res = om::lever::detect_pull(&pd, params);
-        if (pull_res.pulled_lever && app.tasktype != 0) {
-        // if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
+        // if (pull_res.pulled_lever && app.tasktype != 0) {
+        if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
         
           app.timepoint = elapsed_time(app.trialstart_time, now());
           app.behavior_event = i + 1; // lever i+1 (1 or 2) is pulled
