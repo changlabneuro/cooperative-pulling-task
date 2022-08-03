@@ -129,7 +129,6 @@ json to_json(const TrialRecord& trial) {
   result["rewarded"] = trial.rewarded;
   result["task_type"] = trial.task_type;
   result["trial_starttime"] = trial.trial_start_time_stamp;
-
   return result;
 }
 
@@ -147,7 +146,6 @@ json to_json(const BehaviorData& bhv_data) {
   result["trial_number"] = bhv_data.trial_number;
   result["time_points"] = bhv_data.time_points;
   result["behavior_events"] = bhv_data.behavior_events;
- 
   return result;
 }
 
