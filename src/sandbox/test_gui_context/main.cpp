@@ -58,8 +58,8 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string trialrecords_name{"20220804_Dodson_Scorch_TrialRecord_1.json"};
-  std::string bhvdata_name{ "20220804_Dodson_Scorch_bhv_data_1.json" };
+  std::string trialrecords_name{"20220805_Dodson_Scorch_TrialRecord_1.json"};
+  std::string bhvdata_name{ "20220805_Dodson_Scorch_bhv_data_1.json" };
 
   // juice volume condition
   bool fixedvolume{ true }; // true, if use same reward volume across trials (set from the GUI); false, if change reward volume in the following "rewardvol" variable - WS
@@ -78,15 +78,16 @@ struct App : public om::App {
   float lever_position_limits[4]{ 64.5e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
   bool invert_lever_position[2]{true, false};
   
-  float new_delay_time{2.0f};
+  //float new_delay_time{2.0f};
+  double new_delay_time{om::urand()*2+2}; //random delay between 2 to 4 s
   float new_total_time{10.0f};
 
-  om::Vec2f stim0_size{0.15f};
+  om::Vec2f stim0_size{0.25f};
   om::Vec2f stim0_offset{-0.4f, 0.0f};
   om::Vec3f stim0_color{ 1.0f };
   om::Vec3f stim0_color_noreward{1.0f, 1.0f, 0.0f};
   om::Vec3f stim0_color_disappear{ 0.0f };
-  om::Vec2f stim1_size{0.15f};
+  om::Vec2f stim1_size{0.25f};
   om::Vec2f stim1_offset{0.4f, 0.0f};
   om::Vec3f stim1_color{1.0f};
   om::Vec3f stim1_color_noreward{1.0f, 1.0f, 0.0f };
@@ -595,7 +596,8 @@ void task_update(App& app) {
     }
 
     case 1: {
-      delay.total_time = app.new_delay_time; // 2.0f
+      //delay.total_time = app.new_delay_time; // 2.0f
+      delay.total_time = om::urand()*2+2;
       if (tick_delay(&delay, &entry)) {
         state = 2;
         entry = true;
