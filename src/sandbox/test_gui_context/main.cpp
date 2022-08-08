@@ -36,6 +36,14 @@ struct BehaviorData {
   int behavior_events;
 };
 
+struct SessionInfo {
+  std::string lever1_animal;
+  std::string lever2_animal;
+  std::string experiment_date;
+  float init_force;
+  float high_force;
+};
+
 struct LeverReadout {}; // under construction ... -WS
 
 
@@ -58,8 +66,14 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string trialrecords_name{"20220805_Dodson_Scorch_TrialRecord_1.json"};
-  std::string bhvdata_name{ "20220805_Dodson_Scorch_bhv_data_1.json" };
+  std::string trialrecords_name{"20220808_Dodson_Scorch_TrialRecord_1.json"};
+  std::string bhvdata_name{ "20220808_Dodson_Scorch_bhv_data_1.json" };
+  std::string sessioninfo_name{ "20220808_Dodson_Scorch_session_info_1.json" };
+
+  std::string lever1_animal{"scorch"};
+  std::string lever2_animal{"dodson"};
+
+  std::string experiment_date{"20220808"};
 
   // juice volume condition
   bool fixedvolume{ true }; // true, if use same reward volume across trials (set from the GUI); false, if change reward volume in the following "rewardvol" variable - WS
@@ -119,7 +133,8 @@ struct App : public om::App {
   // struct for saving data
   std::vector<TrialRecord> trial_records;
   std::vector<BehaviorData> behavior_data;
-  std::vector<LeverReadout> lever_readout;
+  std::vector<SessionInfo> session_info;
+  std::vector<LeverReadout> lever_readout; // under construction
 
 };
 
@@ -141,6 +156,7 @@ json to_json(const std::vector<TrialRecord>& records) {
   return result;
 }
 
+
 // save data for behavior data
 json to_json(const BehaviorData& bhv_data) {
   json result;
@@ -158,6 +174,26 @@ json to_json(const std::vector<BehaviorData>& time_stamps) {
   return result;
 }
 
+
+// save data for session information
+json to_json(const SessionInfo& session_info) {
+  json result;
+  result["lever1_animal"] = session_info.lever1_animal;
+  result["lever2_animal"] = session_info.lever2_animal;
+  result["levers_initial_force"] = session_info.init_force;
+  result["levers_increased_force"] = session_info.high_force;
+  result["experiment_date"] = session_info.experiment_date;
+
+  return result;
+}
+
+json to_json(const std::vector<SessionInfo>& session_info) {
+  json result;
+  for (auto& sessioninfos : session_info) {
+    result.push_back(to_json(sessioninfos));
+  }
+  return result;
+}
 
 
 void setup(App& app) {
@@ -188,6 +224,8 @@ void setup(App& app) {
     om::lever::set_force(om::lever::get_global_lever_system(), app.levers[0], app.normalforce);
     om::lever::set_force(om::lever::get_global_lever_system(), app.levers[1], app.normalforce);
   }
+
+ 
 }
 
 void shutdown(App& app) {
@@ -199,6 +237,19 @@ void shutdown(App& app) {
   std::string file_path2 = std::string{ OM_DATA_DIR } + "/" + app.bhvdata_name;
   std::ofstream output_file2(file_path2);
   output_file2 << to_json(app.behavior_data);
+
+  // save some task information into session_info
+  SessionInfo session_info{};
+  session_info.lever1_animal = app.lever1_animal;
+  session_info.lever2_animal = app.lever2_animal;
+  session_info.high_force = app.releaseforce;
+  session_info.init_force = app.normalforce;
+  session_info.experiment_date = app.experiment_date;
+  app.session_info.push_back(session_info);
+
+  std::string file_path3 = std::string{ OM_DATA_DIR } + "/" + app.sessioninfo_name;
+  std::ofstream output_file3(file_path3);
+  output_file3 << to_json(app.session_info);
 }
 
 void render_lever_gui(App& app) {
