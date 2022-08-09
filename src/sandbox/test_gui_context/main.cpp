@@ -66,14 +66,14 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string trialrecords_name{"20220808_Dodson_Scorch_TrialRecord_1.json"};
-  std::string bhvdata_name{ "20220808_Dodson_Scorch_bhv_data_1.json" };
-  std::string sessioninfo_name{ "20220808_Dodson_Scorch_session_info_1.json" };
+  std::string trialrecords_name{"20220809_Dodson_Scorch_TrialRecord_1.json"};
+  std::string bhvdata_name{ "20220809_Dodson_Scorch_bhv_data_1.json" };
+  std::string sessioninfo_name{ "20220809_Dodson_Scorch_session_info_1.json" };
 
   std::string lever1_animal{"scorch"};
   std::string lever2_animal{"dodson"};
 
-  std::string experiment_date{"20220808"};
+  std::string experiment_date{"20220809"};
 
   // juice volume condition
   bool fixedvolume{ true }; // true, if use same reward volume across trials (set from the GUI); false, if change reward volume in the following "rewardvol" variable - WS
