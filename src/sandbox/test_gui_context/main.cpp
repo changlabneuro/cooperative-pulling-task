@@ -44,7 +44,19 @@ struct SessionInfo {
   float high_force;
 };
 
-struct LeverReadout {}; // under construction ... -WS
+struct LeverReadout {
+  int trial_number;
+  double readout_timepoint;
+  //float strain_gauge_lever1;
+  //float strain_gauge_lever2;
+  //float potentiometer_lever1;
+  //float potentiometer_lever2;
+  float strain_gauge_lever;
+  float potentiometer_lever;
+  int lever_id;
+  int pull_or_release;
+
+}; // under construction ... -WS
 
 
 struct App : public om::App {
@@ -66,14 +78,16 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string trialrecords_name{"20220809_Dodson_Scorch_TrialRecord_1.json"};
-  std::string bhvdata_name{ "20220809_Dodson_Scorch_bhv_data_1.json" };
-  std::string sessioninfo_name{ "20220809_Dodson_Scorch_session_info_1.json" };
 
-  std::string lever1_animal{"scorch"};
-  std::string lever2_animal{"dodson"};
+  std::string lever2_animal{ "Dodson" };
+  std::string lever1_animal{ "Scorch" };
 
-  std::string experiment_date{"20220809"};
+  std::string experiment_date{ "20220816" };
+
+  std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
+  std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
+  std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
+  std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
   // juice volume condition
   bool fixedvolume{ true }; // true, if use same reward volume across trials (set from the GUI); false, if change reward volume in the following "rewardvol" variable - WS
@@ -81,19 +95,20 @@ struct App : public om::App {
 
   // lever force setting condition
   bool allow_auto_lever_force_set{true}; // true, if use force as below; false, if manually select force level on the GUI. - WS
-  float normalforce{ 130.0f };
-  float releaseforce{350.0f};
+  float normalforce{ 130.0f }; // 130
+  float releaseforce{350.0f}; // 350
 
   bool allow_automated_juice_delivery{};
 
   int lever_force_limits[2]{0, 550};
   om::lever::PullDetect detect_pull[2]{};
   // float lever_position_limits[2]{25e3f, 33e3f};
-  float lever_position_limits[4]{ 64.5e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
+  // float lever_position_limits[4]{ 64.5e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
+  float lever_position_limits[4]{ 63.7e3f, 65.3e3f, 12e2f, 59e2f }; // lever 1 and lever 2 have different potentiometer ranges - WS 
   bool invert_lever_position[2]{true, false};
   
   //float new_delay_time{2.0f};
-  double new_delay_time{om::urand()*2+2}; //random delay between 2 to 4 s
+  double new_delay_time{om::urand()*2+3}; //random delay between 3 to 5 s
   float new_total_time{10.0f};
 
   om::Vec2f stim0_size{0.25f};
@@ -195,6 +210,30 @@ json to_json(const std::vector<SessionInfo>& session_info) {
   return result;
 }
 
+// save data for lever information
+json to_json(const LeverReadout& lever_reading) {
+  json result;
+  result["trial_number"] = lever_reading.trial_number;
+  result["readout_timepoint"] = lever_reading.readout_timepoint;
+  //result["potentiometer_lever1"] = lever_reading.potentiometer_lever1;
+  //result["potentiometer_lever2"] = lever_reading.potentiometer_lever2;
+  //result["potentiometer_lever1"] = lever_reading.strain_gauge_lever1;
+  //result["potentiometer_lever2"] = lever_reading.strain_gauge_lever1;
+  result["potentiometer_lever2"] = lever_reading.potentiometer_lever;
+  result["potentiometer_lever1"] = lever_reading.strain_gauge_lever;
+  result["lever_id"] = lever_reading.lever_id;
+  result["pull_or_release"] = lever_reading.pull_or_release;
+  return result;
+}
+
+json to_json(const std::vector<LeverReadout>& lever_reads) {
+  json result;
+  for (auto& lever_read : lever_reads) {
+    result.push_back(to_json(lever_read));
+  }
+  return result;
+}
+
 
 void setup(App& app) {
 
@@ -250,6 +289,10 @@ void shutdown(App& app) {
   std::string file_path3 = std::string{ OM_DATA_DIR } + "/" + app.sessioninfo_name;
   std::ofstream output_file3(file_path3);
   output_file3 << to_json(app.session_info);
+
+  std::string file_path4 = std::string{ OM_DATA_DIR } + "/" + app.leverread_name;
+  std::ofstream output_file4(file_path4);
+  output_file4 << to_json(app.lever_readout);
 }
 
 void render_lever_gui(App& app) {
@@ -284,9 +327,23 @@ void render_juice_pump_gui(App& app) {
   }
 }
 
+std::optional<std::string> render_text_input_field(const char* field_name) {
+  const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
+
+  char text_buffer[50];
+  memset(text_buffer, 0, 50);
+
+  if (ImGui::InputText(field_name, text_buffer, 50, enter_flag)) {
+    return std::string{ text_buffer };
+  }
+  else {
+    return std::nullopt;
+  }
+}
 
 void render_gui(App& app) {
   const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
+
 
 
   ImGui::Begin("GUI");
@@ -302,8 +359,16 @@ void render_gui(App& app) {
     app.start_render = false;
   }
 
+  //if (auto m1_name = render_text_input_field("Lever1Animal")) {
+  //  app.lever1_animal = m1_name.value();
+  //}
+  //if (auto m2_name = render_text_input_field("Lever2Animal")) {
+  //  app.lever2_animal = m2_name.value();
+  //}
 
   render_lever_gui(app);
+
+  
 
   if (ImGui::TreeNode("PullDetect")) {
     //ImGui::InputFloat2("PositionLimits", app.lever_position_limits);
@@ -426,7 +491,8 @@ void task_update(App& app) {
         if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
             // play sound after pulling
             // om::audio::play_buffer(app.sucessful_pull_audio_buffer.value(), 0.25f);
-
+          
+          // save some behavioral events data
           app.timepoint = elapsed_time(app.trialstart_time, now());
           app.behavior_event = i + 1; // lever i+1 (1 or 2) is pulled
           BehaviorData time_stamps{};
@@ -494,6 +560,8 @@ void task_update(App& app) {
       }
     }
   }
+
+  // training condition
   else if (app.tasktype == 4) {  
     for (int i = 0; i < 2; i++) {
       const auto lh = app.levers[i];
@@ -508,7 +576,9 @@ void task_update(App& app) {
         auto pull_res = om::lever::detect_pull(&pd, params);
         // if (pull_res.pulled_lever && app.tasktype != 0) {
         if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS
-        
+        // if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer) {
+         
+          // save some behavioral events data
           app.timepoint = elapsed_time(app.trialstart_time, now());
           app.behavior_event = i + 1; // lever i+1 (1 or 2) is pulled
           BehaviorData time_stamps{};
@@ -516,6 +586,21 @@ void task_update(App& app) {
           time_stamps.time_points = app.timepoint;
           time_stamps.behavior_events = app.behavior_event;
           app.behavior_data.push_back(time_stamps);
+
+          // save some levr information data
+          LeverReadout lever_read{};
+          lever_read.trial_number = app.trialnumber;
+          lever_read.readout_timepoint = app.timepoint;
+          //lever_read.potentiometer_lever1 = lever_state.value().potentiometer_reading;
+          //lever_read.strain_gauge_lever1 = lever_state.value().strain_gauge;
+          //lever_read.potentiometer_lever2 = lever_state.value().potentiometer_reading;
+          //lever_read.strain_gauge_lever2 = lever_state.value().strain_gauge;
+          lever_read.strain_gauge_lever = lever_state.value().strain_gauge;
+          lever_read.potentiometer_lever = lever_state.value().potentiometer_reading;
+          lever_read.lever_id = i + 1;
+          lever_read.pull_or_release = int(pull_res.pulled_lever);
+          app.lever_readout.push_back(lever_read);
+
 
           if (!app.fixedvolume && !app.leverpulled[i]) {
             auto pump_handle = om::pump::ith_pump(abs(i)); // pump id: 0 - pump 1; 1 - pump 2  -W
@@ -572,7 +657,7 @@ void task_update(App& app) {
               //break;
             }
           }
-          
+                  
           app.leverpulled[i] = true;
 
           if (app.leverpulled[0] && app.leverpulled[1]) {
@@ -580,6 +665,43 @@ void task_update(App& app) {
             entry = true;
             break;
           }
+
+        }
+
+        else if (pull_res.pulled_lever && app.allow_auto_lever_force_set) {
+          om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
+
+          // save some levr information data
+          LeverReadout lever_read{};
+          lever_read.trial_number = app.trialnumber;
+          lever_read.readout_timepoint = elapsed_time(app.trialstart_time, now());;
+          //lever_read.potentiometer_lever1 = lever_state.value().potentiometer_reading;
+          //lever_read.strain_gauge_lever1 = lever_state.value().strain_gauge;
+          //lever_read.potentiometer_lever2 = lever_state.value().potentiometer_reading;
+          //lever_read.strain_gauge_lever2 = lever_state.value().strain_gauge;
+          lever_read.strain_gauge_lever = lever_state.value().strain_gauge;
+          lever_read.potentiometer_lever = lever_state.value().potentiometer_reading;
+          lever_read.lever_id = i + 1;
+          lever_read.pull_or_release = int(pull_res.pulled_lever);
+          app.lever_readout.push_back(lever_read);
+        }
+
+        else if (pull_res.released_lever && app.allow_auto_lever_force_set) {
+          om::lever::set_force(om::lever::get_global_lever_system(), lh, app.normalforce);
+
+          // save some levr information data
+          LeverReadout lever_read{};
+          lever_read.trial_number = app.trialnumber;
+          lever_read.readout_timepoint = elapsed_time(app.trialstart_time, now());;
+          //lever_read.potentiometer_lever1 = lever_state.value().potentiometer_reading;
+          //lever_read.strain_gauge_lever1 = lever_state.value().strain_gauge;
+          //lever_read.potentiometer_lever2 = lever_state.value().potentiometer_reading;
+          //lever_read.strain_gauge_lever2 = lever_state.value().strain_gauge;
+          lever_read.strain_gauge_lever = lever_state.value().strain_gauge;
+          lever_read.potentiometer_lever = lever_state.value().potentiometer_reading;
+          lever_read.lever_id = i + 1;
+          lever_read.pull_or_release = int(pull_res.pulled_lever);
+          app.lever_readout.push_back(lever_read);
 
         }
       }
@@ -648,7 +770,7 @@ void task_update(App& app) {
 
     case 1: {
       //delay.total_time = app.new_delay_time; // 2.0f
-      delay.total_time = om::urand()*2+2;
+      delay.total_time = om::urand()*2+3;
       if (tick_delay(&delay, &entry)) {
         state = 2;
         entry = true;
