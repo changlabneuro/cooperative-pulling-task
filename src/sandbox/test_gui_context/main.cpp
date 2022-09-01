@@ -79,10 +79,10 @@ struct App : public om::App {
 
   // file name
 
-  std::string lever1_animal{ "Dannon" };
-  std::string lever2_animal{ "Kanga" };
+  std::string lever1_animal{ "Scorch" };
+  std::string lever2_animal{ "Dodson" };
 
-  std::string experiment_date{ "20220824" };
+  std::string experiment_date{ "20220902" };
 
   std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;

@@ -20,14 +20,21 @@ int App::run() {
     return 0;
   }
 
+  auto render_win_res_copy = om::create_glfw_context();
+  if (!render_win_res_copy) {
+    return 0;
+  }
+
   auto gui_win = gui_win_res.value();
   auto render_win = render_win_res.value();
+  auto render_win_copy = render_win_res_copy.value();
 
   auto gui_res = om::create_imgui_context(gui_win.window);
   if (!gui_res) {
     om::terminate_glfw();
     om::destroy_glfw_context(&gui_win);
     om::destroy_glfw_context(&render_win);
+    om::destroy_glfw_context(&render_win_copy);
     return 0;
   }
   auto imgui_context = gui_res.value();
@@ -39,9 +46,13 @@ int App::run() {
   om::gfx::init_rendering();
   om::audio::init_audio();
 
+  glfwMakeContextCurrent(render_win_copy.window);
+  om::gfx::init_rendering();
+  // om::audio::init_audio();
+
   setup();
 
-  while (!glfwWindowShouldClose(gui_win.window) && !glfwWindowShouldClose(render_win.window)) {
+  while (!glfwWindowShouldClose(gui_win.window) && !glfwWindowShouldClose(render_win.window) && !glfwWindowShouldClose(render_win_copy.window)) {
     glfwPollEvents();
 
     om::lever::update(lever_sys);
@@ -65,11 +76,19 @@ int App::run() {
       om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
 
       glfwSwapBuffers(render_win.window);
+
+
+      glfwMakeContextCurrent(render_win_copy.window);
+      om::update_framebuffer_dimensions(&render_win_copy);
+      om::gfx::new_frame(render_win_copy.framebuffer_width, render_win_copy.framebuffer_height);
+
+      glfwSwapBuffers(render_win_copy.window);
     }
 
 
     if(start_render)
     {
+
     glfwMakeContextCurrent(render_win.window);
     om::update_framebuffer_dimensions(&render_win);
     om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
@@ -78,7 +97,17 @@ int App::run() {
 
     om::gfx::submit_frame();
     glfwSwapBuffers(render_win.window);
-    }
+
+    glfwMakeContextCurrent(render_win_copy.window);
+    om::update_framebuffer_dimensions(&render_win_copy);
+    om::gfx::new_frame(render_win_copy.framebuffer_width, render_win_copy.framebuffer_height);
+
+    task_update();
+
+    om::gfx::submit_frame();
+    glfwSwapBuffers(render_win_copy.window);
+
+        }
   }
 
   shutdown();
@@ -90,6 +119,7 @@ int App::run() {
   om::destroy_imgui_context(&imgui_context);
   om::destroy_glfw_context(&gui_win);
   om::destroy_glfw_context(&render_win);
+  om::destroy_glfw_context(&render_win_copy);
   om::terminate_glfw();
   return 0;
 }
