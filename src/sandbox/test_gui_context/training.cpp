@@ -30,8 +30,18 @@ NewTrialResult tick_new_trial(NewTrialState* state, bool* entry) {
     state->t0 = now();
   }
 
-  gfx::draw_quad(state->stim0_color, state->stim0_size, state->stim0_offset);
-  gfx::draw_quad(state->stim1_color, state->stim1_size, state->stim1_offset);
+  if (state->stim0_image) {
+    gfx::draw_2d_image(state->stim0_image.value(), state->stim0_size, state->stim0_offset);
+  } else {
+    gfx::draw_quad(state->stim0_color, state->stim0_size, state->stim0_offset);
+  }
+
+  if (state->stim1_image) {
+    gfx::draw_2d_image(state->stim1_image.value(), state->stim1_size, state->stim1_offset);
+  } else {
+    gfx::draw_quad(state->stim1_color, state->stim1_size, state->stim1_offset);
+  }
+
   if (elapsed(state)) {
     result.finished = true;
   }

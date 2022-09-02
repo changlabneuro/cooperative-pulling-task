@@ -151,6 +151,7 @@ struct App : public om::App {
   std::optional<om::audio::BufferHandle> start_trial_audio_buffer;
   std::optional<om::audio::BufferHandle> sucessful_pull_audio_buffer;
   std::optional<om::audio::BufferHandle> failed_pull_audio_buffer;
+  std::optional<om::gfx::TextureHandle> debug_image;
 
 
   std::ofstream save_trial_data_file;
@@ -271,6 +272,9 @@ void setup(App& app) {
 
   auto buff_p2 = std::string{ OM_RES_DIR } + "/sounds/beep-02.wav";
   app.failed_pull_audio_buffer = om::audio::read_buffer(buff_p2.c_str());
+
+  auto debug_image_p = std::string{ OM_RES_DIR } + "/images/calla_leaves.png";
+  app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
 
   const float dflt_rising_edge = 0.6f;
   const float dflt_falling_edge = 0.25f;
@@ -905,6 +909,13 @@ void task_update(App& app) {
         new_trial.stim1_color = app.stim1_color;
         if (app.leverpulled[0]) { new_trial.stim0_color = app.stim0_color_disappear; }
         if (app.leverpulled[1]) { new_trial.stim1_color = app.stim1_color_disappear; }
+      }
+
+      if (0) {
+        //  Optionally specify an image handle - when this is set, the stim0_color parameter
+        //  is ignored and the image is presented instead.
+        new_trial.stim0_image = app.debug_image;
+//        new_trial.stim1_image = app.debug_image;  //  works analogously for the other image.
       }
 
 
