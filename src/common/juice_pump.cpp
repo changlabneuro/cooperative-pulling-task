@@ -145,6 +145,8 @@ std::string make_set_volume_command_string(int addr, float vol,
       }
     }
   }
+#else
+  (void) units;
 #endif
   result += Config::serial_terminator;
   return result;

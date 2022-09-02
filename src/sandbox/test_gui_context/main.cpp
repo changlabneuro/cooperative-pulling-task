@@ -8,7 +8,11 @@
 #include "training.hpp"
 #include "nlohmann/json.hpp"
 #include <imgui.h>
+
+#ifdef _MSC_VER
 #include <Windows.h>
+#endif
+
 #include <time.h>
 #include <thread>
 #include <iostream>
