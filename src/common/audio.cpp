@@ -10,6 +10,8 @@
 
 namespace om::audio {
 
+constexpr int max_num_buffer_output_channels = 4;
+
 struct Buffer {
   std::unique_ptr<float[]> data;
   double sample_rate;
@@ -24,13 +26,13 @@ struct PushBuffer {
 
 struct PendingPlayingBuffer {
   BufferHandle buffer;
-  float gain;
+  float gain[max_num_buffer_output_channels];
 };
 
 struct PlayingBuffer {
   Buffer* buffer;
   double frame;
-  float gain;
+  float gain[max_num_buffer_output_channels];
 };
 
 struct PlayingBuffers {
@@ -88,7 +90,8 @@ void play_buffers(PlayingBuffers* buffs, float* out) {
       }
 
       for (int j = 0; j < std::min(2, globals.num_output_channels); j++) {
-        out[s * globals.num_output_channels + j] += samples[j] * buff.gain;
+        assert(j < max_num_buffer_output_channels);
+        out[s * globals.num_output_channels + j] += samples[j] * buff.gain[j];
       }
 
       buff.frame += buff.buffer->sample_rate / globals.sample_rate;
@@ -119,7 +122,9 @@ bool push_playing(PlayingBuffers* buffs, const PendingPlayingBuffer& pend) {
       return false;
     } else {
       PlayingBuffer playing{};
-      playing.gain = pend.gain;
+      for (int i = 0; i < max_num_buffer_output_channels; i++) {
+        playing.gain[i] = pend.gain[i];
+      }
       playing.buffer = it->second;
       buffs->buffers[buffs->num_playing_buffers++] = playing;
       return true;
@@ -226,6 +231,8 @@ std::optional<BufferHandle> read_buffer(const char* filepath) {
   }
 
   const int num_channels = file.getNumChannels();
+  assert(num_channels <= max_num_buffer_output_channels);
+
   const int spc = file.getNumSamplesPerChannel();
   std::vector<float> data(num_channels * spc);
   if (data.empty()) {
@@ -245,7 +252,7 @@ std::optional<BufferHandle> read_buffer(const char* filepath) {
   return res;
 }
 
-bool play_buffer(BufferHandle buff, float gain) {
+bool play_buffer(BufferHandle buff, float gain_l, float gain_r) {
   assert(globals.pa_stream_started);
   if (globals.pending_play.full()) {
     assert(false);
@@ -253,10 +260,23 @@ bool play_buffer(BufferHandle buff, float gain) {
   } else {
     PendingPlayingBuffer pend{};
     pend.buffer = buff;
-    pend.gain = gain;
+    pend.gain[0] = gain_l;
+    pend.gain[1] = gain_r;
     globals.pending_play.write(pend);
     return true;
   }
+}
+
+bool play_buffer(BufferHandle buff, float gain) {
+  return play_buffer(buff, gain, gain);
+}
+
+bool play_buffer_channel_l(BufferHandle buff, float gain) {
+  return play_buffer(buff, gain, 0.0f);
+}
+
+bool play_buffer_channel_r(BufferHandle buff, float gain) {
+  return play_buffer(buff, 0.0f, gain);
 }
 
 }
