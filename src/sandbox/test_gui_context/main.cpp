@@ -94,7 +94,7 @@ struct App : public om::App {
   std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
   std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
-  int tasktype{ 3 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
+  int tasktype{ 1 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
   // int tasktype{rand()%2}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
   // int tasktype{ rand()%4}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
 

@@ -24,9 +24,9 @@ bool enter(bool* entry) {
 NewTrialResult tick_new_trial(NewTrialState* state, bool* entry) {
   NewTrialResult result{};
   if (enter(entry)) {
-    if (state->play_sound_on_entry) {
-      audio::play_buffer(state->play_sound_on_entry.value(), 0.25f);
-    }
+    // if (state->play_sound_on_entry) {
+    //  audio::play_buffer(state->play_sound_on_entry.value(), 0.25f);
+    //}
     state->t0 = now();
   }
 
