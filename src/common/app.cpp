@@ -101,14 +101,6 @@ int App::run() {
 
 
     if (start_render) {
-      glfwMakeContextCurrent(render_win.window);
-      om::update_framebuffer_dimensions(&render_win);
-      om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
-
-      task_update();
-
-      om::gfx::submit_frame();
-      glfwSwapBuffers(render_win.window);
 
 #if ENABLE_RENDER_WIN_COPY
       glfwMakeContextCurrent(render_win_copy.window);
@@ -120,6 +112,16 @@ int App::run() {
       om::gfx::submit_frame();
       glfwSwapBuffers(render_win_copy.window);
 #endif
+
+      glfwMakeContextCurrent(render_win.window);
+      om::update_framebuffer_dimensions(&render_win);
+      om::gfx::new_frame(render_win.framebuffer_width, render_win.framebuffer_height);
+
+      task_update();
+
+      om::gfx::submit_frame();
+      glfwSwapBuffers(render_win.window);
+
     }
   }
 
