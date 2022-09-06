@@ -252,6 +252,8 @@ std::optional<BufferHandle> read_buffer(const char* filepath) {
   return res;
 }
 
+namespace {
+
 bool play_buffer(BufferHandle buff, float gain_l, float gain_r) {
   assert(globals.pa_stream_started);
   if (globals.pending_play.full()) {
@@ -267,16 +269,28 @@ bool play_buffer(BufferHandle buff, float gain_l, float gain_r) {
   }
 }
 
-bool play_buffer(BufferHandle buff, float gain) {
-  return play_buffer(buff, gain, gain);
-}
-
 bool play_buffer_channel_l(BufferHandle buff, float gain) {
   return play_buffer(buff, gain, 0.0f);
 }
 
 bool play_buffer_channel_r(BufferHandle buff, float gain) {
   return play_buffer(buff, 0.0f, gain);
+}
+
+} //  anon
+
+bool play_buffer(BufferHandle buff, float gain) {
+  return play_buffer(buff, gain, gain);
+}
+
+bool play_buffer_on_channel(BufferHandle buff, int channel, float gain) {
+  //  @TODO: Could set gain in PendingPlayingBuffer directly.
+  assert(channel >= 0 && channel < 2);
+  if (channel == 0) {
+    return play_buffer_channel_l(buff, gain);
+  } else {
+    return play_buffer_channel_r(buff, gain);
+  }
 }
 
 }
