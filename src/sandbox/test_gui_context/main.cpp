@@ -84,24 +84,24 @@ struct App : public om::App {
 
   // file name
 
-  std::string lever1_animal{ "Scorch" };
-  std::string lever2_animal{ "Dodson" };
+  std::string lever1_animal{ "Dodson" };
+  std::string lever2_animal{ "Scorch" };
 
-  std::string experiment_date{ "20220906" };
+  std::string experiment_date{ "20220924" };
 
   std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
   std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
   std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
-  int tasktype{ 2 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
+  int tasktype{ 1 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
   // int tasktype{rand()%2}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
   // int tasktype{ rand()%4}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
 
   // lever force setting condition
   bool allow_auto_lever_force_set{true}; // true, if use force as below; false, if manually select force level on the GUI. - WS
   float normalforce{ 130.0f }; // 130
-  float releaseforce{ 350.0f }; // 350
+  float releaseforce{ 450.0f }; // 350
 
   bool allow_automated_juice_delivery{false};
 
@@ -113,9 +113,12 @@ struct App : public om::App {
   bool invert_lever_position[2]{true, false};
   
   //float new_delay_time{2.0f};
-  double new_delay_time{om::urand()*4+3}; //random delay between 3 to 5 s
-  float new_total_time{1800.0f};
-  int juice_delay_time{ 600 };
+  double new_delay_time{om::urand()*4+3}; //random delay between 3 to 5 s (in unit of second)
+  int juice_delay_time{ 1000 }; // from successful pulling to juice delivery (in unit of minisecond)
+
+  // session threshold
+  float new_total_time{ 3600.0f }; // the time for the session (in unit of second)
+  int total_trial_number{ 500 }; // the maximal trial number of a session
 
   // variables that are updated every trial
   int trialnumber{ 0 };
@@ -142,14 +145,14 @@ struct App : public om::App {
   std::optional<om::audio::BufferHandle> failed_pull_audio_buffer;
 
   // initiate stimuli if using colored squares
-  om::Vec2f stim0_size{ 0.25f };
-  om::Vec2f stim0_offset{ -0.4f, 0.0f };
+  om::Vec2f stim0_size{ 0.2f };
+  om::Vec2f stim0_offset{ -0.4f, 0.25f };
   om::Vec3f stim0_color{ 1.0f };
   om::Vec3f stim0_color_noreward{ 0.5f, 0.5f, 0.5f };
   om::Vec3f stim0_color_cooper{ 1.0f, 1.0f, 0.0f };
   om::Vec3f stim0_color_disappear{ 0.0f };
-  om::Vec2f stim1_size{ 0.25f };
-  om::Vec2f stim1_offset{ 0.4f, 0.0f };
+  om::Vec2f stim1_size{ 0.2f };
+  om::Vec2f stim1_offset{ 0.4f, 0.25f };
   om::Vec3f stim1_color{ 1.0f };
   om::Vec3f stim1_color_noreward{ 1.0f, 1.0f, 0.0f };
   om::Vec3f stim1_color_cooper{ 1.0f, 1.0f, 0.0f };
@@ -256,33 +259,33 @@ void setup(App& app) {
   //auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
   //app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
   if (app.tasktype == 0) {
-    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-04.wav";
+    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
     app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
     auto debug_image_p = std::string{ OM_RES_DIR } + "/images/calla_leaves.png";
     app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
   }
   else if (app.tasktype == 1 || app.tasktype == 4) {
-    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-04.wav";
+    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
     app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
     // auto debug_image_p = std::string{ OM_RES_DIR } + "/images/calla_leaves.png";
     // app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
   }
   else if (app.tasktype == 2) {
-    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-04.wav";
+    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
     app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
     auto debug_image_p = std::string{ OM_RES_DIR } + "/images/blue_triangle.png";
     app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
   }
   else if (app.tasktype == 3) {
-    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/beep-04.wav";
+    auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
     app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
     auto debug_image_p = std::string{ OM_RES_DIR } + "/images/yellow_circle.png";
     app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
   }
-  auto buff_p1 = std::string{ OM_RES_DIR } + "/sounds/beep-08b.wav";
+  auto buff_p1 = std::string{ OM_RES_DIR } + "/sounds/successful_beep.wav";
   app.sucessful_pull_audio_buffer = om::audio::read_buffer(buff_p1.c_str());
 
-  auto buff_p2 = std::string{ OM_RES_DIR } + "/sounds/beep-02.wav";
+  auto buff_p2 = std::string{ OM_RES_DIR } + "/sounds/failed_beep.wav";
   app.failed_pull_audio_buffer = om::audio::read_buffer(buff_p2.c_str());
 
   // define the threshold of pulling
@@ -466,8 +469,8 @@ void task_update(App& app) {
   static NewTrialState new_trial{};
   static DelayState delay{};
   static InnerDelayState innerdelay{};
-  static bool setvols_cue{false};
-  static bool setvols_pull{true};
+  static bool start_session_sound{true};
+
 
 
   //
@@ -486,12 +489,19 @@ void task_update(App& app) {
     app.leverpulledtime[0] = 0;
     app.leverpulledtime[1] = 0;
 
+
     // sound to indicate the start of a session
-    if (app.trialnumber == 0) {
-      om::audio::play_buffer(app.start_trial_audio_buffer.value(), 0.25f);
+    if (app.trialnumber == 0 && start_session_sound) {
+      om::audio::play_buffer_both(app.start_trial_audio_buffer.value(), 0.5f);
       app.session_start_time = now();
+      start_session_sound = false;
+
     }
 
+    // end session when trialnumber or total sesison time reach the threshold
+    //if (app.trialnumber > app.total_trial_number || elapsed_time(app.session_start_time, now()) > app.new_total_time) {
+    //  abort;
+    //}
 
     // push the lever force back to normal
     if (app.allow_auto_lever_force_set) {
@@ -517,7 +527,7 @@ void task_update(App& app) {
       if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer) {
 
         if (app.tasktype != 3) {
-          om::audio::play_buffer(app.sucessful_pull_audio_buffer.value(), 0.25f);
+          om::audio::play_buffer_on_channel(app.sucessful_pull_audio_buffer.value(), abs(i-1), 0.5f);
         }
 
         // trial starts whenever one of the animal pulls
@@ -610,7 +620,7 @@ void task_update(App& app) {
             if (app.tasktype == 3) {
               if (app.leverpulled[0] && app.leverpulled[1]) {
 
-                om::audio::play_buffer(app.sucessful_pull_audio_buffer.value(), 0.25f);
+                om::audio::play_buffer_both(app.sucessful_pull_audio_buffer.value(), 0.5f);
 
                 // pump 0
                 auto pump_handle = om::pump::ith_pump(0); // pump id: 0 - pump 1; 1 - pump 2  -WS
@@ -652,11 +662,10 @@ void task_update(App& app) {
             entry = true;
             break;
           }
-          else if (elapsed_time(app.trialstart_time, now()) >= app.pulledtime_thres) {
-              
+          else {             
             // cooperative condition
             if (app.tasktype == 3) {
-              om::audio::play_buffer(app.failed_pull_audio_buffer.value(), 0.25f);
+              om::audio::play_buffer_both(app.failed_pull_audio_buffer.value(), 0.5f);
             }
 
             state = 1;
@@ -664,7 +673,13 @@ void task_update(App& app) {
             break;
           }
         }
-
+        else if (lever_read.lever_id == app.first_pull_id) {
+          if (app.other_pull_time >= app.pulledtime_thres) {
+            state = 1;
+            entry = true;
+            break;
+          }
+         }
         
       }
 
@@ -672,7 +687,7 @@ void task_update(App& app) {
       else if (pull_res.released_lever && app.allow_auto_lever_force_set) {
         om::lever::set_force(om::lever::get_global_lever_system(), lh, app.normalforce);
 
-        // om::audio::play_buffer(app.failed_pull_audio_buffer.value(), 0.25f);
+        // om::audio::play_buffer_both(app.failed_pull_audio_buffer.value(), 0.5f);
           
         // save some lever information data
         LeverReadout lever_read{};

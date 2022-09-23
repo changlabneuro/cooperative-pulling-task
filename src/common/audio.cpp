@@ -279,7 +279,7 @@ bool play_buffer_channel_r(BufferHandle buff, float gain) {
 
 } //  anon
 
-bool play_buffer(BufferHandle buff, float gain) {
+bool play_buffer_both(BufferHandle buff, float gain) {
   return play_buffer(buff, gain, gain);
 }
 
