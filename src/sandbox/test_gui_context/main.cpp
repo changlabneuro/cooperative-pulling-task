@@ -87,20 +87,20 @@ struct App : public om::App {
   std::string lever1_animal{ "Dodson" };
   std::string lever2_animal{ "Scorch" };
 
-  std::string experiment_date{ "20220924" };
+  std::string experiment_date{ "20221104" };
 
-  std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
-  std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
-  std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
-  std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
+  //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
+  //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
+  //std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
+  //std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
-  int tasktype{ 1 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
+  int tasktype{ 3 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
   // int tasktype{rand()%2}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
   // int tasktype{ rand()%4}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
 
   // lever force setting condition
   bool allow_auto_lever_force_set{true}; // true, if use force as below; false, if manually select force level on the GUI. - WS
-  float normalforce{ 130.0f }; // 130
+  float normalforce{ 100.0f }; // 130
   float releaseforce{ 450.0f }; // 350
 
   bool allow_automated_juice_delivery{false};
@@ -109,7 +109,8 @@ struct App : public om::App {
   om::lever::PullDetect detect_pull[2]{};
   // float lever_position_limits[2]{25e3f, 33e3f};
   // float lever_position_limits[4]{ 64.5e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
-  float lever_position_limits[4]{ 63.7e3f, 65.3e3f, 12e2f, 59e2f }; // lever 1 and lever 2 have different potentiometer ranges - WS 
+  // float lever_position_limits[4]{ 63.7e3f, 65.3e3f, 12e2f, 59e2f }; // lever 1 and lever 2 have different potentiometer ranges - WS 
+  float lever_position_limits[4]{ 42.4e3f, 48.2e3f, 12.5e2f, 70e2f }; // lever 1 and lever 2 have different potentiometer ranges - WS 
   bool invert_lever_position[2]{true, false};
   
   //float new_delay_time{2.0f};
@@ -118,6 +119,7 @@ struct App : public om::App {
 
   // session threshold
   float new_total_time{ 3600.0f }; // the time for the session (in unit of second)
+  // float new_total_time{ 15.0f }; // the time for the maximal trial time - only used for mutual cooperation condition (task type == 3)
   int total_trial_number{ 500 }; // the maximal trial number of a session
 
   // variables that are updated every trial
@@ -125,7 +127,8 @@ struct App : public om::App {
   int first_pull_id{ 0 };
   bool getreward[2]{false, false};
   int rewarded[2]{0, 0};
-  double other_pull_time{};
+  om::TimePoint first_pull_time{}; 
+  double other_pull_time{}; // time gap bwtween two pulls
 
   double timepoint{};
   om::TimePoint trialstart_time;
@@ -136,7 +139,7 @@ struct App : public om::App {
 
   bool leverpulled[2]{ false, false };
   float leverpulledtime[2]{ 0,0 };  //mostly for the cooperative condition (taskytype = 3)
-  float pulledtime_thres{ 3.0f }; // time difference that two animals has to pull the lever 
+  float pulledtime_thres{ 1.0f }; // time difference that two animals has to pull the lever 
 
   // initiate auditory cues
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
@@ -306,12 +309,29 @@ void setup(App& app) {
 }
 
 void shutdown(App& app) {
-  (void) app;
-  std::string file_path1 = std::string{ OM_DATA_DIR } +"/" + app.trialrecords_name;
+  (void)app;
+
+  std::string trialrecords_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_TrialRecord_1.json";
+  std::string bhvdata_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_bhv_data_1.json";
+  std::string sessioninfo_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_session_info_1.json";
+  std::string leverread_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_lever_reading_1.json";
+ 
+  // check if the files already exit, if so, name them as xx_2.json
+  std::string file_path0= std::string{ OM_DATA_DIR } +"/" + trialrecords_name;
+  if (std::ifstream(file_path0))
+  {
+    trialrecords_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_TrialRecord_2.json";
+    bhvdata_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_bhv_data_2.json";
+    sessioninfo_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_session_info_2.json";
+    leverread_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_lever_reading_2.json";
+  }
+
+
+  std::string file_path1 = std::string{ OM_DATA_DIR } +"/" + trialrecords_name;
   std::ofstream output_file1(file_path1);
   output_file1 << to_json(app.trial_records);
 
-  std::string file_path2 = std::string{ OM_DATA_DIR } + "/" + app.bhvdata_name;
+  std::string file_path2 = std::string{ OM_DATA_DIR } + "/" + bhvdata_name;
   std::ofstream output_file2(file_path2);
   output_file2 << to_json(app.behavior_data);
 
@@ -324,11 +344,11 @@ void shutdown(App& app) {
   session_info.experiment_date = app.experiment_date;
   app.session_info.push_back(session_info);
 
-  std::string file_path3 = std::string{ OM_DATA_DIR } + "/" + app.sessioninfo_name;
+  std::string file_path3 = std::string{ OM_DATA_DIR } + "/" + sessioninfo_name;
   std::ofstream output_file3(file_path3);
   output_file3 << to_json(app.session_info);
 
-  std::string file_path4 = std::string{ OM_DATA_DIR } + "/" + app.leverread_name;
+  std::string file_path4 = std::string{ OM_DATA_DIR } + "/" + leverread_name;
   std::ofstream output_file4(file_path4);
   output_file4 << to_json(app.lever_readout);
 }
@@ -530,6 +550,7 @@ void task_update(App& app) {
           om::audio::play_buffer_on_channel(app.sucessful_pull_audio_buffer.value(), abs(i-1), 0.5f);
         }
 
+        // trial starts # 1
         // trial starts whenever one of the animal pulls
         if (!app.leverpulled[0] && !app.leverpulled[1]) {
           app.trialnumber = app.trialnumber + 1;
@@ -537,6 +558,7 @@ void task_update(App& app) {
           app.timepoint = 0;
           app.trialstart_time = now();
           app.trial_start_time_forsave = elapsed_time(app.session_start_time, now());
+          app.first_pull_time = now();
           app.behavior_event = 0; // start of a trial
           BehaviorData time_stamps{};
           time_stamps.trial_number = app.trialnumber;
@@ -548,7 +570,7 @@ void task_update(App& app) {
         // save some behavioral events data
         app.timepoint = elapsed_time(app.trialstart_time, now());
         app.behavior_event = i + 1; // lever i+1 (1 or 2) is pulled
-        app.other_pull_time = app.timepoint;
+        app.other_pull_time = elapsed_time(app.first_pull_time, now());
         BehaviorData time_stamps2{};
         time_stamps2.trial_number = app.trialnumber;
         time_stamps2.time_points = app.timepoint;
@@ -571,6 +593,12 @@ void task_update(App& app) {
 
         app.leverpulled[i] = true;
 
+
+        // high lever force to make the animal release the lever 
+        if (app.allow_auto_lever_force_set) {
+          om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
+        }
+
         // deliver juice accordingly
         // self condition
         if (app.tasktype == 1 || app.tasktype == 4) {
@@ -579,10 +607,7 @@ void task_update(App& app) {
           om::pump::run_dispense_program(pump_handle);
           app.getreward[i] = true;
           app.rewarded[i] = 1;
-          // high lever force to make the animal release the lever 
-          if (app.allow_auto_lever_force_set) {
-            om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
-          }
+          //
           app.timepoint = elapsed_time(app.trialstart_time, now());
           app.behavior_event = abs(i) + 3; // pump 1 or 2 deliver  
           BehaviorData time_stamps3{};
@@ -591,6 +616,7 @@ void task_update(App& app) {
           time_stamps3.behavior_events = app.behavior_event;
           app.behavior_data.push_back(time_stamps3);
         }
+
         // altruistic condition
         else if (app.tasktype == 2) {
           auto pump_handle = om::pump::ith_pump(abs(i-1)); // pump id: 0 - pump 1; 1 - pump 2  -WS
@@ -598,10 +624,7 @@ void task_update(App& app) {
           om::pump::run_dispense_program(pump_handle);
           app.getreward[abs(i - 1)] = true;
           app.rewarded[abs(i - 1)] = 1;
-          // high lever force to make the animal release the lever 
-          if (app.allow_auto_lever_force_set) {
-            om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
-          }
+          //
           app.timepoint = elapsed_time(app.trialstart_time, now());
           app.behavior_event = abs(i-1) + 3; // pump 1 or 2 deliver  
           BehaviorData time_stamps3{};
@@ -610,8 +633,8 @@ void task_update(App& app) {
           time_stamps3.behavior_events = app.behavior_event;
           app.behavior_data.push_back(time_stamps3);
         }
-        // cooperative condition (see below)
-        
+
+        // mutual cooperative condition (see below)
         // examine the other animal to determine how the trial ends 
         if (lever_read.lever_id == abs(app.first_pull_id - 2) + 1) {
           if (app.other_pull_time < app.pulledtime_thres) {
@@ -628,10 +651,7 @@ void task_update(App& app) {
                 om::pump::run_dispense_program(pump_handle);
                 app.getreward[0] = true;
                 app.rewarded[0] = 1;
-                // high lever force to make the animal release the lever 
-                if (app.allow_auto_lever_force_set) {
-                  om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
-                }
+                //
                 app.timepoint = elapsed_time(app.trialstart_time, now());
                 app.behavior_event = 0 + 3; // pump 1 or 2 deliver  
                 BehaviorData time_stamps3{};
@@ -641,14 +661,11 @@ void task_update(App& app) {
                 app.behavior_data.push_back(time_stamps3);
                 // pump 1
                 auto pump_handle2 = om::pump::ith_pump(1); // pump id: 0 - pump 1; 1 - pump 2  -WS
-                std::this_thread::sleep_for(std::chrono::milliseconds(app.juice_delay_time));
+                // std::this_thread::sleep_for(std::chrono::milliseconds(app.juice_delay_time));
                 om::pump::run_dispense_program(pump_handle2);
                 app.getreward[1] = true;
                 app.rewarded[1] = 1;
-                // high lever force to make the animal release the lever 
-                if (app.allow_auto_lever_force_set) {
-                  om::lever::set_force(om::lever::get_global_lever_system(), lh, app.releaseforce);
-                }
+                //
                 app.timepoint = elapsed_time(app.trialstart_time, now());
                 app.behavior_event = abs(1) + 3; // pump 1 or 2 deliver  
                 BehaviorData time_stamps4{};
@@ -663,22 +680,87 @@ void task_update(App& app) {
             break;
           }
           else {             
+            // old edition
             // cooperative condition
-            if (app.tasktype == 3) {
-              om::audio::play_buffer_both(app.failed_pull_audio_buffer.value(), 0.5f);
-            }
+            // if (app.tasktype == 3) {
+            //   om::audio::play_buffer_both(app.failed_pull_audio_buffer.value(), 0.5f);
+            // }
 
-            state = 1;
-            entry = true;
-            break;
+            //state = 1;
+            //entry = true;
+            //break;
+
+            // new edition
+            // end of a trial
+            app.timepoint = elapsed_time(app.trialstart_time, now());
+            app.behavior_event = 9; // end of a trial
+            BehaviorData time_stamps{};
+            time_stamps.trial_number = app.trialnumber;
+            time_stamps.time_points = app.timepoint;
+            time_stamps.behavior_events = app.behavior_event;
+            app.behavior_data.push_back(time_stamps);
+            //
+            TrialRecord trial_record{};
+            trial_record.trial_number = app.trialnumber;
+            trial_record.first_pull_id = app.first_pull_id;
+            trial_record.rewarded = app.rewarded[0] + app.rewarded[1];
+            trial_record.task_type = app.tasktype;
+            trial_record.trial_start_time_stamp = app.trial_start_time_forsave;
+            //  Add to the array of trials.
+            app.trial_records.push_back(trial_record);
+            // 
+            // 
+            // trial starts #2
+            app.trialnumber = app.trialnumber + 1;
+            app.first_pull_id = i + 1;
+            app.timepoint = 0;
+            app.trialstart_time = now();
+            app.trial_start_time_forsave = elapsed_time(app.session_start_time, now());
+            app.first_pull_time = now();
+            app.behavior_event = 0; // start of a trial
+            BehaviorData time_stamps2{};
+            time_stamps2.trial_number = app.trialnumber;
+            time_stamps2.time_points = app.timepoint;
+            time_stamps2.behavior_events = app.behavior_event;
+            app.behavior_data.push_back(time_stamps2);
+            //
+            //app.timepoint = elapsed_time(app.trialstart_time, now());
+            //app.behavior_event = i + 1; // lever i+1 (1 or 2) is pulled
+            //app.other_pull_time = elapsed_time(app.first_pull_time, now());
+            //BehaviorData time_stamps3{};
+            //time_stamps3.trial_number = app.trialnumber;
+            //time_stamps3.time_points = app.timepoint;
+            //time_stamps3.behavior_events = app.behavior_event;
+            //app.behavior_data.push_back(time_stamps3);
+
+
+
           }
         }
         else if (lever_read.lever_id == app.first_pull_id) {
-          if (app.other_pull_time >= app.pulledtime_thres) {
-            state = 1;
-            entry = true;
-            break;
-          }
+          // if (app.other_pull_time >= app.pulledtime_thres) {
+          //  state = 1;
+          //  entry = true;
+          //  break;
+          //}
+          
+          // old edition
+          app.first_pull_time = now();
+
+          // new edition
+          // trial starts #3
+          //app.trialnumber = app.trialnumber + 1;
+          //app.first_pull_id = i + 1;
+          //app.timepoint = 0;
+          //app.trialstart_time = now();
+          //app.trial_start_time_forsave = elapsed_time(app.session_start_time, now());
+          //app.first_pull_time = now();
+          //app.behavior_event = 0; // start of a trial
+          //BehaviorData time_stamps{};
+          //time_stamps.trial_number = app.trialnumber;
+          //time_stamps.time_points = app.timepoint;
+          //time_stamps.behavior_events = app.behavior_event;
+          //app.behavior_data.push_back(time_stamps);
          }
         
       }
