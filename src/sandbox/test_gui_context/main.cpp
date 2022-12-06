@@ -33,6 +33,7 @@ struct TrialRecord {
   int first_pull_id;
   int rewarded;
   int task_type; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
+  float pulltime_thres; // the time window threshold for the cooperation pulling
 };
 
 struct BehaviorData {
@@ -84,10 +85,10 @@ struct App : public om::App {
 
   // file name
 
-  std::string lever2_animal{ "Scorch" };
-  std::string lever1_animal{ "Dodson" };
+  std::string lever1_animal{ "Sparkle" };
+  std::string lever2_animal{ "Eddie" };
 
-  std::string experiment_date{ "20221123" };
+  std::string experiment_date{ "20221206" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
@@ -100,7 +101,7 @@ struct App : public om::App {
 
   // lever force setting condition
   bool allow_auto_lever_force_set{true}; // true, if use force as below; false, if manually select force level on the GUI. - WS
-  float normalforce{ 150.0f }; // 130
+  float normalforce{ 100.0f }; // 130
   float releaseforce{ 350.0f }; // 350
 
   bool allow_automated_juice_delivery{false};
@@ -115,7 +116,7 @@ struct App : public om::App {
   
   //float new_delay_time{2.0f};
   double new_delay_time{om::urand()*4+3}; //random delay between 3 to 5 s (in unit of second)
-  int juice_delay_time{ 800 }; // from successful pulling to juice delivery (in unit of minisecond)
+  int juice_delay_time{ 1000 }; // from successful pulling to juice delivery (in unit of minisecond)
 
   // session threshold
   float new_total_time{ 3600.0f }; // the time for the session (in unit of second)
@@ -139,7 +140,7 @@ struct App : public om::App {
 
   bool leverpulled[2]{ false, false };
   float leverpulledtime[2]{ 0,0 };  //mostly for the cooperative condition (taskytype = 3)
-  float pulledtime_thres{ 1.5f }; // time difference that two animals has to pull the lever 
+  float pulledtime_thres{ 3.0f }; // time difference that two animals has to pull the lever 
 
   // initiate auditory cues
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
@@ -181,6 +182,7 @@ json to_json(const TrialRecord& trial) {
   result["first_pull_id"] = trial.first_pull_id;
   result["task_type"] = trial.task_type;
   result["trial_starttime"] = trial.trial_start_time_stamp;
+  result["pulltime_thres"] = trial.pulltime_thres;
   return result;
 }
 
@@ -292,7 +294,7 @@ void setup(App& app) {
   app.failed_pull_audio_buffer = om::audio::read_buffer(buff_p2.c_str());
 
   // define the threshold of pulling
-  const float dflt_rising_edge = 0.6f;  // 0.6f
+  const float dflt_rising_edge = 0.5f;  // 0.6f
   const float dflt_falling_edge = 0.2f; // 0.25f
   app.detect_pull[0].rising_edge = dflt_rising_edge;
   app.detect_pull[1].rising_edge = dflt_rising_edge;
@@ -705,6 +707,7 @@ void task_update(App& app) {
             trial_record.first_pull_id = app.first_pull_id;
             trial_record.rewarded = app.rewarded[0] + app.rewarded[1];
             trial_record.task_type = app.tasktype;
+            trial_record.pulltime_thres = app.pulledtime_thres;
             trial_record.trial_start_time_stamp = app.trial_start_time_forsave;
             //  Add to the array of trials.
             app.trial_records.push_back(trial_record);
@@ -869,6 +872,7 @@ void task_update(App& app) {
       trial_record.rewarded = app.rewarded[0] + app.rewarded[1];
       trial_record.task_type = app.tasktype;
       trial_record.trial_start_time_stamp = app.trial_start_time_forsave;
+      trial_record.pulltime_thres = app.pulledtime_thres;
       //  Add to the array of trials.
       app.trial_records.push_back(trial_record);
       state = 0;
