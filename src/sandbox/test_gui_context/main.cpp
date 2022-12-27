@@ -48,6 +48,8 @@ struct SessionInfo {
   std::string experiment_date;
   float init_force;
   float high_force;
+  int task_type;
+  float pulltime_thres;
 };
 
 struct LeverReadout {
@@ -88,14 +90,14 @@ struct App : public om::App {
   std::string lever1_animal{ "Sparkle" };
   std::string lever2_animal{ "Eddie" };
 
-  std::string experiment_date{ "20221206" };
+  std::string experiment_date{ "20221227" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
   //std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
   //std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
-  int tasktype{ 3 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
+  int tasktype{ 1 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
   // int tasktype{rand()%2}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
   // int tasktype{ rand()%4}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
 
@@ -221,7 +223,8 @@ json to_json(const SessionInfo& session_info) {
   result["levers_initial_force"] = session_info.init_force;
   result["levers_increased_force"] = session_info.high_force;
   result["experiment_date"] = session_info.experiment_date;
-
+  result["task_type"] = session_info.task_type;
+  result["pulltime_thres"] = session_info.pulltime_thres;
   return result;
 }
 
@@ -344,6 +347,8 @@ void shutdown(App& app) {
   session_info.high_force = app.releaseforce;
   session_info.init_force = app.normalforce;
   session_info.experiment_date = app.experiment_date;
+  session_info.task_type = app.tasktype;
+  session_info.pulltime_thres = app.pulledtime_thres;
   app.session_info.push_back(session_info);
 
   std::string file_path3 = std::string{ OM_DATA_DIR } + "/" + sessioninfo_name;
@@ -427,6 +432,17 @@ void render_gui(App& app) {
   //if (auto m2_name = render_text_input_field("Lever2Animal")) {
   //  app.lever2_animal = m2_name.value();
   //}
+
+  int tasktype_gui[1]{app.tasktype};
+  if (ImGui::InputInt("Task_Type", tasktype_gui, 0, 0, enter_flag)) {
+    app.tasktype = tasktype_gui[0];
+  };
+
+  float pulledtime_thres_gui[1]{app.pulledtime_thres};
+  if (ImGui::InputFloat("cooperation threshold (second)", pulledtime_thres_gui, 0.0f, 0.0f, "%0.1f", enter_flag)) {
+    app.pulledtime_thres = pulledtime_thres_gui[0];
+  };
+  
 
   render_lever_gui(app);
 
@@ -793,7 +809,6 @@ void task_update(App& app) {
   }
 
 
-
   switch (state) {
     case 0: {
       // new_trial.play_sound_on_entry = app.start_trial_audio_buffer;
@@ -803,22 +818,49 @@ void task_update(App& app) {
       new_trial.stim1_offset = app.stim1_offset;
       new_trial.stim1_size = app.stim1_size;
       if (app.tasktype == 0) {
+        //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
+        //app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+        auto debug_image_p = std::string{ OM_RES_DIR } + "/images/calla_leaves.png";
+        app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
+        //
+        new_trial.stim0_image = std::nullopt;
+        new_trial.stim1_image = std::nullopt;
         new_trial.stim0_color = app.stim0_color_noreward;
         new_trial.stim1_color = app.stim1_color_noreward;
       } 
       else if (app.tasktype == 1) {
+        //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
+        //app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+        //
+        new_trial.stim0_image = std::nullopt;
+        new_trial.stim1_image = std::nullopt;
         new_trial.stim0_color = app.stim0_color;
         new_trial.stim1_color = app.stim1_color;
       }
       else if (app.tasktype == 2) {
+        //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
+        //app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+        auto debug_image_p = std::string{ OM_RES_DIR } + "/images/blue_triangle.png";
+        app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
+        //
         new_trial.stim0_image = app.debug_image;
         new_trial.stim1_image = app.debug_image;
       }
       else if (app.tasktype == 3) {
+        //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
+        //app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+        auto debug_image_p = std::string{ OM_RES_DIR } + "/images/yellow_circle.png";
+        app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
+        //
         new_trial.stim0_image = app.debug_image;
         new_trial.stim1_image = app.debug_image;
       }
       else if (app.tasktype == 4) {
+        //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
+        //app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
+        //
+        new_trial.stim0_image = std::nullopt;
+        new_trial.stim1_image = std::nullopt;
         new_trial.stim0_color = app.stim0_color;
         new_trial.stim1_color = app.stim1_color;
         // if (app.leverpulled[0]) { new_trial.stim0_color = app.stim0_color_disappear; }
