@@ -88,9 +88,9 @@ struct App : public om::App {
   // file name
 
   std::string lever1_animal{ "Sparkle" };
-  std::string lever2_animal{ "Eddie" };
+  std::string lever2_animal{ "Artemis" };
 
-  std::string experiment_date{ "20221227" };
+  std::string experiment_date{ "20230117" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
@@ -142,7 +142,7 @@ struct App : public om::App {
 
   bool leverpulled[2]{ false, false };
   float leverpulledtime[2]{ 0,0 };  //mostly for the cooperative condition (taskytype = 3)
-  float pulledtime_thres{ 3.0f }; // time difference that two animals has to pull the lever 
+  float pulledtime_thres{ 1.0f }; // time difference that two animals has to pull the lever 
 
   // initiate auditory cues
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
@@ -433,16 +433,17 @@ void render_gui(App& app) {
   //  app.lever2_animal = m2_name.value();
   //}
 
-  int tasktype_gui[1]{app.tasktype};
-  if (ImGui::InputInt("Task_Type", tasktype_gui, 0, 0, enter_flag)) {
-    app.tasktype = tasktype_gui[0];
-  };
+  if (0) {
+    int tasktype_gui[1]{ app.tasktype };
+    if (ImGui::InputInt("Task_Type", tasktype_gui, 0, 0, enter_flag)) {
+      app.tasktype = tasktype_gui[0];
+    };
 
-  float pulledtime_thres_gui[1]{app.pulledtime_thres};
-  if (ImGui::InputFloat("cooperation threshold (second)", pulledtime_thres_gui, 0.0f, 0.0f, "%0.1f", enter_flag)) {
-    app.pulledtime_thres = pulledtime_thres_gui[0];
-  };
-  
+    float pulledtime_thres_gui[1]{ app.pulledtime_thres };
+    if (ImGui::InputFloat("cooperation threshold (second)", pulledtime_thres_gui, 0.0f, 0.0f, "%0.1f", enter_flag)) {
+      app.pulledtime_thres = pulledtime_thres_gui[0];
+    };
+  }
 
   render_lever_gui(app);
 
@@ -820,8 +821,8 @@ void task_update(App& app) {
       if (app.tasktype == 0) {
         //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
         //app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
-        auto debug_image_p = std::string{ OM_RES_DIR } + "/images/calla_leaves.png";
-        app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
+        // auto debug_image_p = std::string{ OM_RES_DIR } + "/images/calla_leaves.png";
+        // app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
         //
         new_trial.stim0_image = std::nullopt;
         new_trial.stim1_image = std::nullopt;
@@ -840,8 +841,8 @@ void task_update(App& app) {
       else if (app.tasktype == 2) {
         //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
         //app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
-        auto debug_image_p = std::string{ OM_RES_DIR } + "/images/blue_triangle.png";
-        app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
+        //auto debug_image_p = std::string{ OM_RES_DIR } + "/images/blue_triangle.png";
+       // app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
         //
         new_trial.stim0_image = app.debug_image;
         new_trial.stim1_image = app.debug_image;
@@ -849,8 +850,8 @@ void task_update(App& app) {
       else if (app.tasktype == 3) {
         //auto buff_p = std::string{ OM_RES_DIR } + "/sounds/start_trial_beep.wav";
         //app.start_trial_audio_buffer = om::audio::read_buffer(buff_p.c_str());
-        auto debug_image_p = std::string{ OM_RES_DIR } + "/images/yellow_circle.png";
-        app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
+        //auto debug_image_p = std::string{ OM_RES_DIR } + "/images/yellow_circle.png";
+        //app.debug_image = om::gfx::read_2d_image(debug_image_p.c_str());
         //
         new_trial.stim0_image = app.debug_image;
         new_trial.stim1_image = app.debug_image;
