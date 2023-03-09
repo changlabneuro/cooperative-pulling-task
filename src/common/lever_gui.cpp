@@ -5,6 +5,22 @@
 
 namespace om {
 
+namespace {
+
+const char* to_string(SerialLeverDirection dir) {
+  switch (dir) {
+    case SerialLeverDirection::Forward:
+      return "Forward";
+    case SerialLeverDirection::Reverse:
+      return "Reverse";
+    default:
+      assert(false);
+      return "";
+  }
+}
+
+} //  anon
+
 gui::LeverGUIResult gui::render_lever_gui(const LeverGUIParams& params) {
   gui::LeverGUIResult result{};
   auto* lever_sys = params.lever_system;
@@ -66,9 +82,22 @@ gui::LeverGUIResult gui::render_lever_gui(const LeverGUIParams& params) {
         ImGui::Text("Invalid force.");
       }
 
+      if (auto dir = om::lever::get_canonical_direction(lever_sys, lever)) {
+        ImGui::Text("Canonical direction: %s", to_string(dir.value()));
+      } else {
+        ImGui::Text("Invalid direction.");
+      }
+
       int commanded_force = om::lever::get_commanded_force(lever_sys, lever);
       ImGui::SliderInt("SetForce", &commanded_force, force_lims[0], force_lims[1]);
       om::lever::set_force(lever_sys, lever, commanded_force);
+
+      SerialLeverDirection dir = om::lever::get_commanded_direction(lever_sys, lever);
+      bool dir_forwards = dir == SerialLeverDirection::Forward;
+      if (ImGui::Checkbox("DirectionIsForward", &dir_forwards)) {
+        auto new_dir = dir_forwards ? SerialLeverDirection::Forward : SerialLeverDirection::Reverse;
+        om::lever::set_direction(lever_sys, lever, new_dir);
+      }
 
       if (open) {
         if (ImGui::Button("Terminate serial context")) {

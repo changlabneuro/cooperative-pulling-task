@@ -15,6 +15,7 @@ enum class SerialLeverError {
 
 enum class LeverMessageType {
   SetForce = 0,
+  SetDirection,
   ShareState,
   OpenPort,
   ClosePort,
@@ -26,6 +27,7 @@ struct LeverMessageData {
   LeverMessageType type;
   std::optional<LeverState> state;
   std::optional<int> force;
+  std::optional<SerialLeverDirection> direction;
   std::string port;
   bool is_open;
   SerialLeverError error;
@@ -36,7 +38,9 @@ struct LeverSystem {
     SerialContext serial_context;
     std::optional<LeverState> state;
     std::optional<int> force;
+    std::optional<SerialLeverDirection> direction;
     int commanded_force{};
+    SerialLeverDirection commanded_direction{SerialLeverDirection::Forward};
     bool need_send_state{};
     std::optional<SerialLeverError> open_response;
   };
@@ -45,9 +49,12 @@ struct LeverSystem {
     SerialLeverHandle handle;
     std::optional<int> pending_canonical_force;
     std::optional<std::string> pending_open_port;
+    std::optional<SerialLeverDirection> pending_canonical_direction;
     bool pending_close_port{};
     int commanded_force{};
+    SerialLeverDirection commanded_direction{SerialLeverDirection::Forward};
     std::optional<int> canonical_force;
+    std::optional<SerialLeverDirection> canonical_direction;
     std::optional<LeverState> state;
     Handshake<LeverMessageData> message;
 
@@ -91,6 +98,13 @@ LeverMessageData make_set_force_message(int force) {
   return result;
 }
 
+LeverMessageData make_set_direction_message(SerialLeverDirection dir) {
+  LeverMessageData result{};
+  result.type = LeverMessageType::SetDirection;
+  result.direction = dir;
+  return result;
+}
+
 LeverMessageData make_open_port_message(std::string&& port) {
   LeverMessageData result{};
   result.type = LeverMessageType::OpenPort;
@@ -119,6 +133,7 @@ LeverMessageData make_share_state_message(const LeverSystem::RemoteInstance& rem
   LeverMessageData message{};
   message.type = LeverMessageType::ShareState;
   message.force = remote.force;
+  message.direction = remote.direction;
   message.state = remote.state;
   message.handle = handle;
   message.is_open = is_open(remote.serial_context);
@@ -129,6 +144,11 @@ bool process_remote_message(LeverSystem::RemoteInstance& remote, LeverMessageDat
   switch (data.type) {
     case LeverMessageType::SetForce: {
       remote.commanded_force = data.force.value();
+      return false;
+    }
+
+    case LeverMessageType::SetDirection: {
+      remote.commanded_direction = data.direction.value();
       return false;
     }
 
@@ -186,6 +206,12 @@ void process_remote_instance(LeverSystem* system, LeverSystem::RemoteInstance& r
       remote.force = remote.commanded_force;
     } else {
       remote.force = std::nullopt;
+    }
+
+    if (auto resp = om::set_lever_direction(remote.serial_context, remote.commanded_direction)) {
+      remote.direction = remote.commanded_direction;
+    } else {
+      remote.direction = std::nullopt;
     }
 
     if (auto state = om::read_state(remote.serial_context)) {
@@ -271,6 +297,12 @@ void lever::update(LeverSystem* system) {
       publish(&inst->message, std::move(data));
       inst->pending_canonical_force = std::nullopt;
     }
+
+    if (inst->pending_canonical_direction && !inst->message.awaiting_read) {
+      auto data = make_set_direction_message(inst->pending_canonical_direction.value());
+      publish(&inst->message, std::move(data));
+      inst->pending_canonical_direction = std::nullopt;
+    }
   }
 
   const int num_read = system->read_remote.size();
@@ -279,6 +311,7 @@ void lever::update(LeverSystem* system) {
     if (response.type == LeverMessageType::ShareState) {
       if (auto* inst = find_local_instance(system, response.handle)) {
         inst->canonical_force = response.force;
+        inst->canonical_direction = response.direction;
         inst->state = response.state;
         inst->is_open = response.is_open;
       }
@@ -297,6 +330,15 @@ void lever::set_force(LeverSystem* system, SerialLeverHandle instance, int grams
   if (auto* inst = find_local_instance(system, instance)) {
     inst->pending_canonical_force = grams;
     inst->commanded_force = grams;
+  } else {
+    assert(false);
+  }
+}
+
+void lever::set_direction(LeverSystem* system, SerialLeverHandle instance, SerialLeverDirection dir) {
+  if (auto* inst = find_local_instance(system, instance)) {
+    inst->pending_canonical_direction = dir;
+    inst->commanded_direction = dir;
   } else {
     assert(false);
   }
@@ -362,6 +404,24 @@ std::optional<LeverState> lever::get_state(LeverSystem* system, SerialLeverHandl
   } else {
     assert(false);
     return std::nullopt;
+  }
+}
+
+std::optional<SerialLeverDirection> lever::get_canonical_direction(LeverSystem* system, SerialLeverHandle instance) {
+  if (auto* inst = find_local_instance(system, instance)) {
+    return inst->canonical_direction;
+  } else {
+    assert(false);
+    return std::nullopt;
+  }
+}
+
+SerialLeverDirection lever::get_commanded_direction(LeverSystem* system, SerialLeverHandle instance) {
+  if (auto* inst = find_local_instance(system, instance)) {
+    return inst->commanded_direction;
+  } else {
+    assert(false);
+    return {};
   }
 }
 
