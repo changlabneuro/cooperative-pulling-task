@@ -1,0 +1,6 @@
+with lever in forwards mode, ramp force -> 0
+switch direction to reverse
+ramp force -> e.g. 100
+ramp force -> 0
+switch direction to forwards
+ramp force -> 100
