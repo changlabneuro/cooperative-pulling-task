@@ -87,17 +87,17 @@ struct App : public om::App {
 
   // file name
 
-  std::string lever1_animal{ "Sparkle" };
-  std::string lever2_animal{ "Artemis" };
+  std::string lever1_animal{ "Dodson" };
+  std::string lever2_animal{ "Scorch" };
 
-  std::string experiment_date{ "20230117" };
+  std::string experiment_date{ "20230309" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
   //std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
   //std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
-  int tasktype{ 1 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
+  int tasktype{ 3 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
   // int tasktype{rand()%2}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
   // int tasktype{ rand()%4}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
 
@@ -108,7 +108,7 @@ struct App : public om::App {
 
   bool allow_automated_juice_delivery{false};
 
-  int lever_force_limits[2]{0, 550};
+  int lever_force_limits[2]{-550, 550};
   om::lever::PullDetect detect_pull[2]{};
   // float lever_position_limits[2]{25e3f, 33e3f};
   // float lever_position_limits[4]{ 64.5e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
@@ -142,7 +142,7 @@ struct App : public om::App {
 
   bool leverpulled[2]{ false, false };
   float leverpulledtime[2]{ 0,0 };  //mostly for the cooperative condition (taskytype = 3)
-  float pulledtime_thres{ 1.0f }; // time difference that two animals has to pull the lever 
+  float pulledtime_thres{ 2.0f }; // time difference that two animals has to pull the lever 
 
   // initiate auditory cues
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
