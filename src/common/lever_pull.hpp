@@ -24,6 +24,7 @@ struct AutomatedPull {
   enum class ForceTransitionState {
     Idle,
     Transitioning,
+    Timeout
   };
 
   enum class State {
@@ -43,9 +44,10 @@ struct AutomatedPull {
 };
 
 struct AutomatedPullParams {
-  float force_slope_g_s{40.0f};
+  float force_slope_g_s{800.0f};
   float force_target_low{};
   float force_target_high{100.0f};
+  float force_transition_timeout_s{0.125f};
 };
 
 struct AutomatedPullResult {

@@ -411,10 +411,33 @@ std::optional<std::string> render_text_input_field(const char* field_name) {
   }
 }
 
+void do_update_automated_pull(App& app) {
+  if (app.need_trigger_automated_pull &&
+    app.automated_pull.state == om::lever::AutomatedPull::State::Idle) {
+    om::lever::start_automated_pull(&app.automated_pull, app.normalforce);
+    app.need_trigger_automated_pull = false;
+  }
+
+  auto* lever_sys = om::lever::get_global_lever_system();
+  auto res = om::lever::update_automated_pull(&app.automated_pull, app.automated_pull_params);
+  if (res.set_direction) {
+    auto dir = res.set_direction.value() ?
+      om::SerialLeverDirection::Forward : om::SerialLeverDirection::Reverse;
+    om::lever::set_direction(lever_sys, app.levers[0], dir);
+  }
+
+  if (res.set_force) {
+    om::lever::set_force(lever_sys, app.levers[0], res.set_force.value());
+  }
+}
+
 
 void render_gui(App& app) {
   const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
 
+#if 0
+  do_update_automated_pull(app);
+#endif
 
 
   ImGui::Begin("GUI");
@@ -498,26 +521,6 @@ void render_gui(App& app) {
   ImGui::Begin("JuicePump");
   render_juice_pump_gui(app);
   ImGui::End();
-}
-
-void update_automated_pull(App& app) {
-  if (app.need_trigger_automated_pull && 
-      app.automated_pull.state == om::lever::AutomatedPull::State::Idle) {
-    om::lever::start_automated_pull(&app.automated_pull, app.normalforce);
-    app.need_trigger_automated_pull = false;
-  }
-
-  auto* lever_sys = om::lever::get_global_lever_system();
-  auto res = om::lever::update_automated_pull(&app.automated_pull, app.automated_pull_params);
-  if (res.set_direction) {
-    auto dir = res.set_direction.value() ?
-      om::SerialLeverDirection::Forward : om::SerialLeverDirection::Reverse;
-    om::lever::set_direction(lever_sys, app.levers[0], dir);
-  }
-
-  if (res.set_force) {
-    om::lever::set_force(lever_sys, app.levers[0], res.set_force.value());
-  }
 }
 
 
@@ -959,10 +962,6 @@ void task_update(App& app) {
       assert(false);
     }
   }
-
-#if 1
-  update_automated_pull(app);
-#endif
 }
 
 

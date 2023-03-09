@@ -48,13 +48,13 @@ AutomatedPullResult update_automated_pull(AutomatedPull* pull, const AutomatedPu
   }
 
   auto now_t = now();
-  double dt{};
+  om::Duration dt{};
   if (pull->state_last_time) {
-    dt = (now_t - pull->state_last_time.value()).count();
+    dt = now_t - pull->state_last_time.value();
   }
   pull->state_last_time = now_t;
 
-  const float force_slope = std::max(0.0f, params.force_slope_g_s);
+  const float force_slope = std::max(0.0f, params.force_slope_g_s) * dt.count();
   bool finished_transition{};
 
   switch (pull->force_state) {
@@ -65,17 +65,25 @@ AutomatedPullResult update_automated_pull(AutomatedPull* pull, const AutomatedPu
       const float target_force = pull->target_high ? params.force_target_high : params.force_target_low;
 
       if (target_force < pull->current_force) {
-        pull->current_force = std::max(target_force, float(pull->current_force - dt * force_slope));
+        pull->current_force = std::max(target_force, float(pull->current_force - force_slope));
 
       } else if (target_force > pull->current_force) {
-        pull->current_force = std::min(target_force, float(pull->current_force + dt * force_slope));
+        pull->current_force = std::min(target_force, float(pull->current_force + force_slope));
       }
 
       if (target_force == pull->current_force) {
+        pull->force_state = AutomatedPull::ForceTransitionState::Timeout;
+        pull->state_elapsed_time = {};
+      }
+
+      break;
+    }
+    case AutomatedPull::ForceTransitionState::Timeout: {
+      pull->state_elapsed_time += dt;
+      if (pull->state_elapsed_time.count() > params.force_transition_timeout_s) {
         pull->force_state = AutomatedPull::ForceTransitionState::Idle;
         finished_transition = true;
       }
-
       break;
     }
     default: {
