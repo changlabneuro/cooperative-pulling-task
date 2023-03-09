@@ -1,7 +1,7 @@
 #include "RunningAverage.h"
 
-#define ENABLE_PIN 9 //8 - modified: WS
-#define DIRECTION_PIN 8 //9 - modified: WS
+#define ENABLE_PIN 8
+#define DIRECTION_PIN 9
 #define PWM_PIN 10
 #define FEEDBACK_PIN 11
 #define analogResolution 16
@@ -71,7 +71,7 @@ pinMode(DIRECTION_PIN, OUTPUT);
 pinMode(PWM_PIN, OUTPUT);
 pinMode(FEEDBACK_PIN, INPUT);
 //digitalWrite(ENABLE_PIN, 1);
-digitalWrite(ENABLE_PIN, 1); // 0  - modified: WS
+digitalWrite(ENABLE_PIN, 1);
 digitalWrite(DIRECTION_PIN, DIRECTION);
 analogWrite(PWM_PIN, 0);
 
@@ -118,12 +118,14 @@ while (Serial.available() > 0) {
     } 
   if(incomingByte == 'f') {
     DIRECTION = 1;
+    digitalWrite(DIRECTION_PIN, DIRECTION);
     Serial.println("forward");
   }
-//  if(incomingByte == 'r') {
-//    DIRECTION = 0;
-//    Serial.println("reverse");
-//  }
+  if(incomingByte == 'z') {
+    DIRECTION = 0;
+    digitalWrite(DIRECTION_PIN, DIRECTION);
+    Serial.println("reverse");
+  }
   if(incomingByte == 'p') {
     PWM_VALUE = Serial.parseInt();
 //    if(PWM_VALUE >= 0) {
@@ -149,16 +151,16 @@ while (Serial.available() > 0) {
     Serial.print("calculated PWM value: ");
     Serial.println(PWM_VALUE);
 
-    int last_dir = DIRECTION;
-    if(PWM_VALUE >= 0) {
-      DIRECTION = 1;
-    } else {
-      DIRECTION = 0;
-    }
-
-    if (last_dir != DIRECTION) {
-      digitalWrite(DIRECTION_PIN, DIRECTION);
-    }
+//    int last_dir = DIRECTION;
+//    if(PWM_VALUE >= 0) {
+//      DIRECTION = 1;
+//    } else {
+//      DIRECTION = 0;
+//    }
+//
+//    if (last_dir != DIRECTION) {
+//      digitalWrite(DIRECTION_PIN, DIRECTION);
+//    }
   }
 
   if(incomingByte == 'u') {

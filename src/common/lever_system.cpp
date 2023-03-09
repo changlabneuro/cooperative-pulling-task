@@ -14,8 +14,7 @@ enum class SerialLeverError {
 };
 
 enum class LeverMessageType {
-  SetForce = 0,
-  SetDirection,
+  SetForceOrDirection = 0,
   ShareState,
   OpenPort,
   ClosePort,
@@ -91,16 +90,10 @@ LeverSystem::LocalInstance* find_local_instance(LeverSystem* sys, SerialLeverHan
   return nullptr;
 }
 
-LeverMessageData make_set_force_message(int force) {
+LeverMessageData make_set_force_and_direction_message(std::optional<int> force, std::optional<SerialLeverDirection> dir) {
   LeverMessageData result{};
-  result.type = LeverMessageType::SetForce;
+  result.type = LeverMessageType::SetForceOrDirection;
   result.force = force;
-  return result;
-}
-
-LeverMessageData make_set_direction_message(SerialLeverDirection dir) {
-  LeverMessageData result{};
-  result.type = LeverMessageType::SetDirection;
   result.direction = dir;
   return result;
 }
@@ -142,13 +135,13 @@ LeverMessageData make_share_state_message(const LeverSystem::RemoteInstance& rem
 
 bool process_remote_message(LeverSystem::RemoteInstance& remote, LeverMessageData&& data) {
   switch (data.type) {
-    case LeverMessageType::SetForce: {
-      remote.commanded_force = data.force.value();
-      return false;
-    }
-
-    case LeverMessageType::SetDirection: {
-      remote.commanded_direction = data.direction.value();
+    case LeverMessageType::SetForceOrDirection: {
+      if (data.force) {
+        remote.commanded_force = data.force.value();
+      }
+      if (data.direction) {
+        remote.commanded_direction = data.direction.value();
+      }
       return false;
     }
 
@@ -292,15 +285,13 @@ void lever::update(LeverSystem* system) {
       inst->pending_close_port = false;
     }
 
-    if (inst->pending_canonical_force && !inst->message.awaiting_read) {
-      auto data = make_set_force_message(inst->pending_canonical_force.value());
+    if ((inst->pending_canonical_force || inst->pending_canonical_direction) && 
+        !inst->message.awaiting_read) {
+
+      auto data = make_set_force_and_direction_message(
+        inst->pending_canonical_force, inst->pending_canonical_direction);
       publish(&inst->message, std::move(data));
       inst->pending_canonical_force = std::nullopt;
-    }
-
-    if (inst->pending_canonical_direction && !inst->message.awaiting_read) {
-      auto data = make_set_direction_message(inst->pending_canonical_direction.value());
-      publish(&inst->message, std::move(data));
       inst->pending_canonical_direction = std::nullopt;
     }
   }

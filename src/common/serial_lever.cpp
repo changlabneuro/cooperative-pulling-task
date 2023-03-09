@@ -84,7 +84,7 @@ std::optional<int> set_force_grams(const SerialContext& context, int force) {
 }
 
 bool set_lever_direction(const SerialContext& context, SerialLeverDirection dir) {
-  const char* cmd = dir == SerialLeverDirection::Forward ? "f" : "r";
+  const char* cmd = dir == SerialLeverDirection::Forward ? "f" : "z";
   std::string command{cmd};
   command += "\n";
   context.instance->write(command);
