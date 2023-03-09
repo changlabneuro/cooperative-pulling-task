@@ -1,8 +1,9 @@
 #include "lever_pull.hpp"
+#include <cassert>
 
 namespace om::lever {
 
-  PullDetectResult detect_pull(PullDetect* pd, const PullDetectParams& params) {
+PullDetectResult detect_pull(PullDetect* pd, const PullDetectParams& params) {
     PullDetectResult result{};
 
     if (pd->is_high && params.current_position < pd->falling_edge) {
@@ -27,6 +28,96 @@ namespace om::lever {
      // result.pulled_lever = true;
     //}
  
+  return result;
+}
+
+void start_automated_pull(AutomatedPull* pull, float current_force) {
+  assert(pull->state == AutomatedPull::State::Idle && 
+         pull->force_state == AutomatedPull::ForceTransitionState::Idle);
+  *pull = {};
+  pull->current_force = current_force;
+  pull->state = AutomatedPull::State::Forwards0;
+  pull->force_state = AutomatedPull::ForceTransitionState::Transitioning;
+  pull->target_high = false;
+}
+
+AutomatedPullResult update_automated_pull(AutomatedPull* pull, const AutomatedPullParams& params) {
+  AutomatedPullResult result{};
+  if (pull->state == AutomatedPull::State::Idle) {
+    return result;
+  }
+
+  auto now_t = now();
+  double dt{};
+  if (pull->state_last_time) {
+    dt = (now_t - pull->state_last_time.value()).count();
+  }
+  pull->state_last_time = now_t;
+
+  const float force_slope = std::max(0.0f, params.force_slope_g_s);
+  bool finished_transition{};
+
+  switch (pull->force_state) {
+    case AutomatedPull::ForceTransitionState::Idle: {
+      break;
+    }
+    case AutomatedPull::ForceTransitionState::Transitioning: {
+      const float target_force = pull->target_high ? params.force_target_high : params.force_target_low;
+
+      if (target_force < pull->current_force) {
+        pull->current_force = std::max(target_force, float(pull->current_force - dt * force_slope));
+
+      } else if (target_force > pull->current_force) {
+        pull->current_force = std::min(target_force, float(pull->current_force + dt * force_slope));
+      }
+
+      if (target_force == pull->current_force) {
+        pull->force_state = AutomatedPull::ForceTransitionState::Idle;
+        finished_transition = true;
+      }
+
+      break;
+    }
+    default: {
+      assert(false);
+    }
+  }
+
+  if (finished_transition) {
+    switch (pull->state) {
+      case AutomatedPull::State::Forwards0: {
+        //  Switch to reverse direction.
+        result.set_direction = false;
+        pull->force_state = AutomatedPull::ForceTransitionState::Transitioning;
+        pull->state = AutomatedPull::State::Reverse0;
+        pull->target_high = true;
+        break;
+      }
+      case AutomatedPull::State::Reverse0: {
+        //  Set force -> 0
+        pull->force_state = AutomatedPull::ForceTransitionState::Transitioning;
+        pull->target_high = false;
+        pull->state = AutomatedPull::State::Reverse1;
+        break;
+      }
+      case AutomatedPull::State::Reverse1: {
+        //  Switch to forward direction.
+        result.set_direction = true;
+        pull->force_state = AutomatedPull::ForceTransitionState::Transitioning;
+        pull->state = AutomatedPull::State::Forwards1;
+        pull->target_high = true;
+        break;
+      }
+      case AutomatedPull::State::Forwards1: {
+        result.elapsed = true;
+        pull->state = AutomatedPull::State::Idle;
+      }
+    }
+  }
+
+  result.active = true;
+  result.set_force = pull->current_force;
+
   return result;
 }
 
