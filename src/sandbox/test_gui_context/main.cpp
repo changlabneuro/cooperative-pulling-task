@@ -144,6 +144,10 @@ struct App : public om::App {
   float leverpulledtime[2]{ 0,0 };  //mostly for the cooperative condition (taskytype = 3)
   float pulledtime_thres{ 1.0f }; // time difference that two animals has to pull the lever 
 
+  om::lever::AutomatedPull automated_pull{};
+  om::lever::AutomatedPullParams automated_pull_params{};
+  bool need_trigger_automated_pull{};
+
   // initiate auditory cues
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
   std::optional<om::audio::BufferHandle> start_trial_audio_buffer;
@@ -468,6 +472,14 @@ void render_gui(App& app) {
   }
 
 
+  if (ImGui::TreeNode("AutomatedPull")) {
+    if (ImGui::Button("Trigger")) {
+      app.need_trigger_automated_pull = true;
+    }
+
+    ImGui::TreePop();
+  }
+
   if (ImGui::TreeNode("Stim0")) {
     ImGui::InputFloat3("Color", &app.stim0_color.x);
     ImGui::InputFloat2("Offset", &app.stim0_offset.x);
@@ -486,6 +498,26 @@ void render_gui(App& app) {
   ImGui::Begin("JuicePump");
   render_juice_pump_gui(app);
   ImGui::End();
+}
+
+void update_automated_pull(App& app) {
+  if (app.need_trigger_automated_pull && 
+      app.automated_pull.state == om::lever::AutomatedPull::State::Idle) {
+    om::lever::start_automated_pull(&app.automated_pull, app.normalforce);
+    app.need_trigger_automated_pull = false;
+  }
+
+  auto* lever_sys = om::lever::get_global_lever_system();
+  auto res = om::lever::update_automated_pull(&app.automated_pull, app.automated_pull_params);
+  if (res.set_direction) {
+    auto dir = res.set_direction.value() ?
+      om::SerialLeverDirection::Forward : om::SerialLeverDirection::Reverse;
+    om::lever::set_direction(lever_sys, app.levers[0], dir);
+  }
+
+  if (res.set_force) {
+    om::lever::set_force(lever_sys, app.levers[0], res.set_force.value());
+  }
 }
 
 
@@ -927,6 +959,10 @@ void task_update(App& app) {
       assert(false);
     }
   }
+
+#if 1
+  update_automated_pull(app);
+#endif
 }
 
 
