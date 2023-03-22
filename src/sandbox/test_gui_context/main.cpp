@@ -87,10 +87,10 @@ struct App : public om::App {
 
   // file name
 
-  std::string lever1_animal{ "Dodson" };
-  std::string lever2_animal{ "Scorch" };
+  std::string lever1_animal{ "Scorch" };
+  std::string lever2_animal{ "Dodson" };
 
-  std::string experiment_date{ "20230309" };
+  std::string experiment_date{ "20230322" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
@@ -142,7 +142,7 @@ struct App : public om::App {
 
   bool leverpulled[2]{ false, false };
   float leverpulledtime[2]{ 0,0 };  //mostly for the cooperative condition (taskytype = 3)
-  float pulledtime_thres{ 2.0f }; // time difference that two animals has to pull the lever 
+  float pulledtime_thres{ 1.0f }; // time difference that two animals has to pull the lever 
 
   om::lever::AutomatedPull automated_pull{};
   om::lever::AutomatedPullParams automated_pull_params{};
