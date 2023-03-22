@@ -35,6 +35,7 @@ struct TrialRecord {
   int rewarded;
   int task_type; // indicate the task type and different cue color (maybe beep sounds too): 0 no reward; 1 - self; 2 - altruistic (not built yet); 3 - cooperative (not built yet); 4  - for training (one reward for each animal in the cue on period)
   float pulltime_thres; // the time window threshold for the cooperation pulling
+  int automated_lever_enabled_index;
 };
 
 struct BehaviorData {
@@ -99,6 +100,7 @@ struct App : public om::App {
   //std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
   int tasktype{ 3 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
+
   // int tasktype{rand()%2}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
   // int tasktype{ rand()%4}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
 
@@ -192,6 +194,7 @@ json to_json(const TrialRecord& trial) {
   result["task_type"] = trial.task_type;
   result["trial_starttime"] = trial.trial_start_time_stamp;
   result["pulltime_thres"] = trial.pulltime_thres;
+  result["automated_lever_enabled_index"] = trial.automated_lever_enabled_index;
   return result;
 }
 
@@ -435,6 +438,11 @@ void render_gui(App& app) {
     app.start_render = false;
   }
 
+  ImGui::Checkbox("EnableAutomatedLever0", &app.automated_pulls_enabled[0]);
+  ImGui::SameLine();
+  ImGui::Checkbox("EnableAutomatedLever1", &app.automated_pulls_enabled[1]);
+
+
   //if (auto m1_name = render_text_input_field("Lever1Animal")) {
   //  app.lever1_animal = m1_name.value();
   //}
@@ -483,6 +491,34 @@ void render_gui(App& app) {
     }
     if (ImGui::Button("Trigger1")) {
       app.need_trigger_automated_pulls[1] = true;
+    }
+
+    auto render_auto_pull_lever_params = [&](int i) {
+      auto* p = &app.automated_pull_schedules[i];
+      auto exp_random_mu = float(p->exp_random_interval_mu);
+      auto epoch_time = float(p->epoch_time);
+
+      ImGui::Checkbox("Enabled", &app.automated_pulls_enabled[i]);
+      ImGui::SliderFloat("MinInveral", &p->min_interval, 0.0f, 100.0f);
+      ImGui::SliderFloat("MaxInterval", &p->max_interval, 0.0f, 100.0f);
+      ImGui::SliderFloat("ExpRandomIntervalMean", &exp_random_mu, 0.0f, 100.0f);
+      ImGui::SliderFloat("DowntimeEpochDuration", &epoch_time, 0.0f, 100.0f);
+
+      p->exp_random_interval_mu = exp_random_mu;
+      p->epoch_time = epoch_time;
+    };
+
+    auto& common_p = app.automated_pull_params;
+    ImGui::SliderFloat("HighTargetForceGrams", &common_p.force_target_high, 0.0f, 500.0f);
+
+    if (ImGui::TreeNode("Lever0")) {
+      render_auto_pull_lever_params(0);
+      ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Lever1")) {
+      render_auto_pull_lever_params(1);
+      ImGui::TreePop();
     }
 
     ImGui::TreePop();
@@ -564,6 +600,15 @@ void always_update_automated_pull(App& app) {
   }
 
   do_update_automated_pull(app);
+}
+
+int get_automated_lever_enabled_index(const App& app) {
+  for (int i = 0; i < 2; i++) {
+    if (app.automated_pulls_enabled[i]) {
+      return i + 1;
+    }
+  }
+  return 0;
 }
 
 void task_update(App& app) {
@@ -786,6 +831,7 @@ void task_update(App& app) {
             trial_record.first_pull_id = app.first_pull_id;
             trial_record.rewarded = app.rewarded[0] + app.rewarded[1];
             trial_record.task_type = app.tasktype;
+            trial_record.automated_lever_enabled_index = get_automated_lever_enabled_index(app);
             trial_record.pulltime_thres = app.pulledtime_thres;
             trial_record.trial_start_time_stamp = app.trial_start_time_forsave;
             //  Add to the array of trials.
@@ -976,6 +1022,7 @@ void task_update(App& app) {
       trial_record.first_pull_id = app.first_pull_id;
       trial_record.rewarded = app.rewarded[0] + app.rewarded[1];
       trial_record.task_type = app.tasktype;
+      trial_record.automated_lever_enabled_index = get_automated_lever_enabled_index(app);
       trial_record.trial_start_time_stamp = app.trial_start_time_forsave;
       trial_record.pulltime_thres = app.pulledtime_thres;
       //  Add to the array of trials.

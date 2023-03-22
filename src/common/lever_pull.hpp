@@ -12,10 +12,16 @@ struct PullSchedule {
   };
 
   bool initialized{};
-  Mode mode{};
-  float interval_s{1.0f};
-  double exp_random_interval_mu{5.0};
+  Mode mode{Mode::ExpRandomInterval};
+  float interval_s{4.0f};
+  double exp_random_interval_mu{4.3};
+  float min_interval{ 0.25f };
+  float max_interval{ 30.0f };
   TimePoint last_pull{};
+
+  bool is_downtime_epoch{};
+  TimePoint began_epoch{};
+  double epoch_time{ 15.0 };
 };
 
 struct PullScheduleUpdateResult {
@@ -63,7 +69,7 @@ struct AutomatedPull {
 struct AutomatedPullParams {
   float force_slope_g_s{800.0f};
   float force_target_low{};
-  float force_target_high{100.0f};
+  float force_target_high{250.0f};
   float force_transition_timeout_s{0.125f};
 };
 

@@ -1,5 +1,6 @@
 #include "lever_pull.hpp"
 #include "./random.hpp"
+#include "./common.hpp"
 #include <cassert>
 
 namespace om::lever {
@@ -133,13 +134,25 @@ AutomatedPullResult update_automated_pull(AutomatedPull* pull, const AutomatedPu
 om::lever::PullScheduleUpdateResult om::lever::update_pull_schedule(PullSchedule* pull) {
   om::lever::PullScheduleUpdateResult result{};
 
+  auto curr_t = now();
+
   if (!pull->initialized) {
-    pull->last_pull = now();
+    pull->last_pull = curr_t;
+    pull->began_epoch = curr_t;
     pull->initialized = true;
   }
 
-  auto curr_t = now();
-  auto delta_t = curr_t - pull->last_pull;
+  auto epoch_delta_t = om::Duration(curr_t - pull->began_epoch);
+  if (epoch_delta_t.count() >= pull->epoch_time) {
+    pull->is_downtime_epoch = !pull->is_downtime_epoch;
+    pull->began_epoch = curr_t;
+  }
+
+  if (pull->is_downtime_epoch) {
+    return result;
+  }
+
+  auto delta_t = om::Duration(curr_t - pull->last_pull);
 
   switch (pull->mode) {
     case PullSchedule::Mode::FixedInterval:
@@ -149,7 +162,8 @@ om::lever::PullScheduleUpdateResult om::lever::update_pull_schedule(PullSchedule
         pull->last_pull = curr_t;
 
         if (pull->mode == PullSchedule::Mode::ExpRandomInterval) {
-          pull->interval_s = exprand(pull->exp_random_interval_mu);
+          pull->interval_s = clamp(
+            float(exprand(pull->exp_random_interval_mu)), pull->min_interval, pull->max_interval);
         }
       }
       break;
