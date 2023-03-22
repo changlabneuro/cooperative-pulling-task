@@ -1,4 +1,5 @@
 #include "lever_pull.hpp"
+#include "./random.hpp"
 #include <cassert>
 
 namespace om::lever {
@@ -125,6 +126,38 @@ AutomatedPullResult update_automated_pull(AutomatedPull* pull, const AutomatedPu
 
   result.active = true;
   result.set_force = pull->current_force;
+
+  return result;
+}
+
+om::lever::PullScheduleUpdateResult om::lever::update_pull_schedule(PullSchedule* pull) {
+  om::lever::PullScheduleUpdateResult result{};
+
+  if (!pull->initialized) {
+    pull->last_pull = now();
+    pull->initialized = true;
+  }
+
+  auto curr_t = now();
+  auto delta_t = curr_t - pull->last_pull;
+
+  switch (pull->mode) {
+    case PullSchedule::Mode::FixedInterval:
+    case PullSchedule::Mode::ExpRandomInterval: {
+      if (delta_t.count() >= pull->interval_s) {
+        result.do_pull = true;
+        pull->last_pull = curr_t;
+
+        if (pull->mode == PullSchedule::Mode::ExpRandomInterval) {
+          pull->interval_s = exprand(pull->exp_random_interval_mu);
+        }
+      }
+      break;
+    }
+    default: {
+      assert(false);
+    }
+  }
 
   return result;
 }

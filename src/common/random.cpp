@@ -1,5 +1,6 @@
 #include "random.hpp"
 #include <random>
+#include <cmath>
 
 namespace om {
 
@@ -33,6 +34,10 @@ void Random::set_seed(uint32_t seed) {
 
 double urand() {
   return global_random_stream();
+}
+
+double exprand(double mu) {
+  return -mu * std::log(urand());
 }
 
 void seed_urand(unsigned int seed) {
