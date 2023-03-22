@@ -26,6 +26,7 @@ void render_gui(App& app);
 void task_update(App& app);
 void setup(App& app);
 void shutdown(App& app);
+void do_update_automated_pull(App& app);
 
 struct TrialRecord {
   double trial_start_time_stamp;  // time since the session starts
@@ -144,9 +145,11 @@ struct App : public om::App {
   float leverpulledtime[2]{ 0,0 };  //mostly for the cooperative condition (taskytype = 3)
   float pulledtime_thres{ 2.0f }; // time difference that two animals has to pull the lever 
 
-  om::lever::AutomatedPull automated_pull{};
+  bool automated_pulls_enabled[2]{};
+  om::lever::AutomatedPull automated_pulls[2]{};
   om::lever::AutomatedPullParams automated_pull_params{};
-  bool need_trigger_automated_pull{};
+  bool need_trigger_automated_pulls[2]{};
+  om::lever::PullSchedule automated_pull_schedules[2]{};
 
   // initiate auditory cues
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
@@ -411,27 +414,6 @@ std::optional<std::string> render_text_input_field(const char* field_name) {
   }
 }
 
-void do_update_automated_pull(App& app) {
-  if (app.need_trigger_automated_pull &&
-    app.automated_pull.state == om::lever::AutomatedPull::State::Idle) {
-    om::lever::start_automated_pull(&app.automated_pull, app.normalforce);
-    app.need_trigger_automated_pull = false;
-  }
-
-  auto* lever_sys = om::lever::get_global_lever_system();
-  auto res = om::lever::update_automated_pull(&app.automated_pull, app.automated_pull_params);
-  if (res.set_direction) {
-    auto dir = res.set_direction.value() ?
-      om::SerialLeverDirection::Forward : om::SerialLeverDirection::Reverse;
-    om::lever::set_direction(lever_sys, app.levers[0], dir);
-  }
-
-  if (res.set_force) {
-    om::lever::set_force(lever_sys, app.levers[0], res.set_force.value());
-  }
-}
-
-
 void render_gui(App& app) {
   const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
 
@@ -496,8 +478,11 @@ void render_gui(App& app) {
 
 
   if (ImGui::TreeNode("AutomatedPull")) {
-    if (ImGui::Button("Trigger")) {
-      app.need_trigger_automated_pull = true;
+    if (ImGui::Button("Trigger0")) {
+      app.need_trigger_automated_pulls[0] = true;
+    }
+    if (ImGui::Button("Trigger1")) {
+      app.need_trigger_automated_pulls[1] = true;
     }
 
     ImGui::TreePop();
@@ -535,6 +520,52 @@ float to_normalized(float v, float min, float max, bool inv) {
 }
 
 
+float get_normalized_lever_position(const App& app, const om::LeverState& lever_state, int i) {
+  return to_normalized(
+    lever_state.potentiometer_reading,
+    app.lever_position_limits[2 * i],
+    app.lever_position_limits[2 * i + 1],
+    app.invert_lever_position[i]);
+}
+
+void do_update_automated_pull(App& app) {
+  for (int i = 0; i < 2; i++) {
+    if (app.need_trigger_automated_pulls[i] &&
+        app.automated_pulls[i].state == om::lever::AutomatedPull::State::Idle) {
+      //
+      om::lever::start_automated_pull(&app.automated_pulls[i], app.normalforce);
+      app.need_trigger_automated_pulls[i] = false;
+    }
+  }
+
+  auto* lever_sys = om::lever::get_global_lever_system();
+
+  for (int i = 0; i < 2; i++) {
+    auto res = om::lever::update_automated_pull(&app.automated_pulls[i], app.automated_pull_params);
+    if (res.set_direction) {
+      auto dir = res.set_direction.value() ?
+        om::SerialLeverDirection::Forward : om::SerialLeverDirection::Reverse;
+      om::lever::set_direction(lever_sys, app.levers[i], dir);
+    }
+
+    if (res.set_force) {
+      om::lever::set_force(lever_sys, app.levers[i], res.set_force.value());
+    }
+  }
+}
+
+
+void always_update_automated_pull(App& app) {
+  for (int i = 0; i < 2; i++) {
+    auto pull_sched_res = om::lever::update_pull_schedule(&app.automated_pull_schedules[i]);
+    if (pull_sched_res.do_pull && app.automated_pulls_enabled[i]) {
+      app.need_trigger_automated_pulls[i] = true;
+    }
+  }
+
+  do_update_automated_pull(app);
+}
+
 void task_update(App& app) {
   using namespace om;
 
@@ -544,8 +575,6 @@ void task_update(App& app) {
   static DelayState delay{};
   static InnerDelayState innerdelay{};
   static bool start_session_sound{true};
-
-
 
   //
   // renew for every new trial
@@ -584,17 +613,15 @@ void task_update(App& app) {
     }
   }
 
+  always_update_automated_pull(app);
+
   // check the levers
   for (int i = 0; i < 2; i++) {
     const auto lh = app.levers[i];
     auto& pd = app.detect_pull[i];
     if (auto lever_state = om::lever::get_state(om::lever::get_global_lever_system(), lh)) {
       om::lever::PullDetectParams params{};
-      params.current_position = to_normalized(
-        lever_state.value().potentiometer_reading,
-        app.lever_position_limits[2 * i],
-        app.lever_position_limits[2 * i + 1],
-        app.invert_lever_position[i]);
+      params.current_position = get_normalized_lever_position(app, lever_state.value(), i);
       auto pull_res = om::lever::detect_pull(&pd, params);
       // if (pull_res.pulled_lever && app.tasktype != 0) {
       // if (pull_res.pulled_lever && app.sucessful_pull_audio_buffer && state == 0) { // only pull during the trial, not the ITI (state == 1)  -WS

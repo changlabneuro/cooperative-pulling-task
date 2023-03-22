@@ -5,6 +5,23 @@
 
 namespace om::lever {
 
+struct PullSchedule {
+  enum class Mode {
+    FixedInterval = 0,
+    ExpRandomInterval = 1,
+  };
+
+  bool initialized{};
+  Mode mode{};
+  float interval_s{1.0f};
+  double exp_random_interval_mu{5.0};
+  TimePoint last_pull{};
+};
+
+struct PullScheduleUpdateResult {
+  bool do_pull;
+};
+
 struct PullDetect {
   bool is_high;
   float rising_edge;
@@ -61,5 +78,7 @@ PullDetectResult detect_pull(PullDetect* pd, const PullDetectParams& params);
 
 void start_automated_pull(AutomatedPull* pull, float current_force);
 AutomatedPullResult update_automated_pull(AutomatedPull* pull, const AutomatedPullParams& params);
+
+PullScheduleUpdateResult update_pull_schedule(PullSchedule* pull);
 
 }
