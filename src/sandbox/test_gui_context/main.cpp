@@ -178,6 +178,7 @@ struct App : public om::App {
   // struct for saving data
   // std::ofstream save_trial_data_file;
   
+  bool dont_save_data{};
   std::vector<TrialRecord> trial_records;
   std::vector<BehaviorData> behavior_data;
   std::vector<SessionInfo> session_info;
@@ -326,48 +327,47 @@ void setup(App& app) {
 void shutdown(App& app) {
   (void)app;
 
+#if 0
   std::string trialrecords_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_TrialRecord_1.json";
   std::string bhvdata_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_bhv_data_1.json";
   std::string sessioninfo_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_session_info_1.json";
   std::string leverread_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_lever_reading_1.json";
- 
-  // check if the files already exit, if so, name them as xx_2.json
-  std::string file_path0= std::string{ OM_DATA_DIR } +"/" + trialrecords_name;
-  if (std::ifstream(file_path0))
-  {
-    trialrecords_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_TrialRecord_2.json";
-    bhvdata_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_bhv_data_2.json";
-    sessioninfo_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_session_info_2.json";
-    leverread_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_lever_reading_2.json";
+#else
+  auto postfix = om::date_string();
+  std::string trialrecords_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_TrialRecord_" + postfix + ".json";
+  std::string bhvdata_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_bhv_data_" + postfix + ".json";
+  std::string sessioninfo_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_session_info_" + postfix + ".json";
+  std::string leverread_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_lever_reading_" + postfix + ".json";
+#endif
+
+  if (!app.dont_save_data) {
+    std::string file_path1 = std::string{ OM_DATA_DIR } + "/" + trialrecords_name;
+    std::ofstream output_file1(file_path1);
+    output_file1 << to_json(app.trial_records);
+
+    std::string file_path2 = std::string{ OM_DATA_DIR } + "/" + bhvdata_name;
+    std::ofstream output_file2(file_path2);
+    output_file2 << to_json(app.behavior_data);
+
+    // save some task information into session_info
+    SessionInfo session_info{};
+    session_info.lever1_animal = app.lever1_animal;
+    session_info.lever2_animal = app.lever2_animal;
+    session_info.high_force = app.releaseforce;
+    session_info.init_force = app.normalforce;
+    session_info.experiment_date = app.experiment_date;
+    session_info.task_type = app.tasktype;
+    session_info.pulltime_thres = app.pulledtime_thres;
+    app.session_info.push_back(session_info);
+
+    std::string file_path3 = std::string{ OM_DATA_DIR } + "/" + sessioninfo_name;
+    std::ofstream output_file3(file_path3);
+    output_file3 << to_json(app.session_info);
+
+    std::string file_path4 = std::string{ OM_DATA_DIR } + "/" + leverread_name;
+    std::ofstream output_file4(file_path4);
+    output_file4 << to_json(app.lever_readout);
   }
-
-
-  std::string file_path1 = std::string{ OM_DATA_DIR } +"/" + trialrecords_name;
-  std::ofstream output_file1(file_path1);
-  output_file1 << to_json(app.trial_records);
-
-  std::string file_path2 = std::string{ OM_DATA_DIR } + "/" + bhvdata_name;
-  std::ofstream output_file2(file_path2);
-  output_file2 << to_json(app.behavior_data);
-
-  // save some task information into session_info
-  SessionInfo session_info{};
-  session_info.lever1_animal = app.lever1_animal;
-  session_info.lever2_animal = app.lever2_animal;
-  session_info.high_force = app.releaseforce;
-  session_info.init_force = app.normalforce;
-  session_info.experiment_date = app.experiment_date;
-  session_info.task_type = app.tasktype;
-  session_info.pulltime_thres = app.pulledtime_thres;
-  app.session_info.push_back(session_info);
-
-  std::string file_path3 = std::string{ OM_DATA_DIR } + "/" + sessioninfo_name;
-  std::ofstream output_file3(file_path3);
-  output_file3 << to_json(app.session_info);
-
-  std::string file_path4 = std::string{ OM_DATA_DIR } + "/" + leverread_name;
-  std::ofstream output_file4(file_path4);
-  output_file4 << to_json(app.lever_readout);
 }
 
 
@@ -436,6 +436,11 @@ void render_gui(App& app) {
 
   if (ImGui::Button("pause the trial")) {
     app.start_render = false;
+  }
+
+  bool save_data = !app.dont_save_data;
+  if (ImGui::Checkbox("SaveData", &save_data)) {
+    app.dont_save_data = !save_data;
   }
 
   ImGui::Checkbox("EnableAutomatedLever0", &app.automated_pulls_enabled[0]);
