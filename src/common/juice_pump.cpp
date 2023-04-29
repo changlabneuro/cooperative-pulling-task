@@ -117,7 +117,7 @@ std::string make_set_rate_command_string(int addr, int rate, std::optional<pump:
 
 std::string to_float_limit_trailing_digits(float v) {
   char buff[128];
-  int cx = std::snprintf(buff, 128, "%0.1f", v);
+  int cx = std::snprintf(buff, 128, "%0.3f", v);
   if (cx >= 0 && cx < 128) {
     return std::string{buff};
   } else {
