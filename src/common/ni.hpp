@@ -12,11 +12,14 @@ struct ChannelDescriptor {
   double max_value;
 };
 
+//  @NOTE: Cannot read from and write to the same terminal (channel name) simultaneously.
 struct InitParams {
   double sample_rate;
   int num_samples_per_channel;
   const ChannelDescriptor* analog_input_channels;
   int num_analog_input_channels;
+  const ChannelDescriptor* analog_output_channels;
+  int num_analog_output_channels;
   std::optional<const char*> sample_clock_channel_name;
 };
 
@@ -34,10 +37,13 @@ struct SampleBuffer {
 };
 
 bool init_ni(const InitParams& params);
+void update_ni();
 void terminate_ni();
 
 int read_sample_buffers(const SampleBuffer** buffs);
 void release_sample_buffers();
 std::vector<TriggerTimePoint> read_trigger_time_points(om::TimePoint* t0);
+
+bool write_analog_pulse(int channel, float time_high);
 
 }

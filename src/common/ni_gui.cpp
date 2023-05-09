@@ -1,4 +1,5 @@
 #include "ni_gui.hpp"
+#include "ni.hpp"
 #include <imgui.h>
 #include <implot.h>
 
@@ -10,6 +11,11 @@ void om::gui::render_ni_gui(NIGUIData* gui, const ni::SampleBuffer* buffs, int n
   }
 
   ImGui::Begin("NI");
+
+  if (ImGui::Button("TriggerPulse")) {
+    om::ni::write_analog_pulse(0, 0.5f);
+  }
+
   ImPlot::BeginPlot("TriggerChannel");
 
   ImPlot::PlotLine("Trigger", gui->sample_history.data.data(), gui->sample_history.size);

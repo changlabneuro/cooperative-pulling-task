@@ -638,7 +638,7 @@ int get_automated_lever_enabled_index(const App& app) {
 }
 
 void always_update(App& app) {
-  om::ni::release_sample_buffers();
+  om::ni::update_ni();
   app.num_ni_sample_buffers = om::ni::read_sample_buffers(&app.ni_sample_buffers);
 }
 
@@ -1070,17 +1070,24 @@ void task_update(App& app) {
 
 bool initialize_ni() {
   om::ni::InitParams init_params{};
-  om::ni::ChannelDescriptor ai0_desc{};
+  om::ni::ChannelDescriptor ai0_input_desc{};
+  om::ni::ChannelDescriptor ai_output_desc{};
 
-  ai0_desc.name = "Dev1/ai0";
-  ai0_desc.max_value = 10.0;
-  ai0_desc.min_value = -10.0;
+  ai0_input_desc.name = "Dev1/ai0";
+  ai0_input_desc.max_value = 10.0;
+  ai0_input_desc.min_value = -10.0;
+
+  ai_output_desc.name = "Dev1/ao0";
+  ai_output_desc.min_value = -10.0;
+  ai_output_desc.max_value = 10.0;
 
   init_params.sample_rate = 1e4;
   init_params.sample_clock_channel_name = "/Dev1/PFI0";
   init_params.num_samples_per_channel = Config::ni_num_samples_per_channel;
   init_params.num_analog_input_channels = 1;
-  init_params.analog_input_channels = &ai0_desc;
+  init_params.analog_input_channels = &ai0_input_desc;
+  init_params.num_analog_output_channels = 1;
+  init_params.analog_output_channels = &ai_output_desc;
 
   return om::ni::init_ni(init_params);
 }
