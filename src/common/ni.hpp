@@ -42,7 +42,10 @@ void terminate_ni();
 
 int read_sample_buffers(const SampleBuffer** buffs);
 void release_sample_buffers();
-std::vector<TriggerTimePoint> read_trigger_time_points(om::TimePoint* t0);
+
+om::TimePoint read_time0();
+std::vector<TriggerTimePoint> read_trigger_time_points();
+std::vector<TriggerTimePoint> read_sync_time_points();
 
 bool write_analog_pulse(int channel, float time_high);
 

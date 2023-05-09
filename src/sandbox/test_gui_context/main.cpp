@@ -247,6 +247,43 @@ json to_json(const std::vector<BehaviorData>& time_stamps) {
   return result;
 }
 
+json to_json(const om::ni::TriggerTimePoint& tp) {
+  json result;
+  result["sample_index"] = tp.sample_index;
+  result["elapsed_time"] = tp.elapsed_time;
+  return result;
+}
+
+json get_ni_json_data(om::TimePoint session_t0) {
+  const auto sync_ts = om::ni::read_sync_time_points();
+  const auto trigger_ts = om::ni::read_trigger_time_points();
+  const auto ni_t0 = om::ni::read_time0();
+
+  json json_sync_ts;
+  for (auto& t : sync_ts) {
+    json_sync_ts.push_back(to_json(t));
+  }
+
+  json json_trigger_ts;
+  for (auto& t : trigger_ts) {
+    json_trigger_ts.push_back(to_json(t));
+  }
+
+  double session_offset{};
+  if (session_t0 < ni_t0) {
+    session_offset = -om::elapsed_time(session_t0, ni_t0);
+  }
+  else {
+    session_offset = om::elapsed_time(ni_t0, session_t0);
+  }
+
+  json ni_data;
+  ni_data["session_t0_offset"] = session_offset;
+  ni_data["sync_ts"] = json_sync_ts;
+  ni_data["trigger_ts"] = json_trigger_ts;
+  return ni_data;
+}
+
 
 // save data for session information
 json to_json(const SessionInfo& session_info) {
@@ -361,6 +398,7 @@ void shutdown(App& app) {
   std::string bhvdata_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_bhv_data_" + postfix + ".json";
   std::string sessioninfo_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_session_info_" + postfix + ".json";
   std::string leverread_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_lever_reading_" + postfix + ".json";
+  std::string ni_data_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_ni_data_" + postfix + ".json";
 #endif
 
   if (!app.dont_save_data) {
@@ -390,6 +428,11 @@ void shutdown(App& app) {
     std::string file_path4 = std::string{ OM_DATA_DIR } + "/" + leverread_name;
     std::ofstream output_file4(file_path4);
     output_file4 << to_json(app.lever_readout);
+
+    //  ni session data
+    std::string ni_session_data_file_path = std::string{ OM_DATA_DIR } + "/" + ni_data_name;
+    std::ofstream ni_output_file(ni_session_data_file_path);
+    ni_output_file << get_ni_json_data(app.session_start_time);
   }
 }
 

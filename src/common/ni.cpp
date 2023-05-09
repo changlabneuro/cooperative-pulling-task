@@ -13,6 +13,15 @@ using namespace om;
 
 struct Config {
   static constexpr int input_sample_buffer_ring_buffer_capacity = 16;
+  static constexpr uint64_t input_sample_index_sync_frequency = 10000;
+};
+
+struct NIInputSampleSyncPoints {
+  void clear() {
+    time_points.clear();
+  }
+
+  std::vector<ni::TriggerTimePoint> time_points;
 };
 
 struct OutputPulseQueue {
@@ -42,8 +51,8 @@ struct OutputPulseQueue {
 };
 
 struct TriggerDetect {
-  double rising_threshold{5.0};
-  double falling_threshold{2.0};
+  double rising_threshold{1.5};
+  double falling_threshold{0.25};
   bool high{};
 };
 
@@ -162,6 +171,8 @@ struct {
   OutputPulseQueue output_pulse_queue;
   om::TimePoint last_time{};
   bool first_time{};
+
+  NIInputSampleSyncPoints input_sample_sync_points;
 
 } globals;
 
@@ -471,6 +482,30 @@ void ni::update_ni() {
       }
     }
   }
+
+  { //  sync between ni sample indices and task time
+    const SampleBuffer* buffs{};
+    int num_buffs = std::min(1, read_sample_buffers(&buffs));
+    if (num_buffs > 0) {
+      auto& buff = buffs[0];
+      bool push_timepoint{};
+      if (globals.input_sample_sync_points.time_points.empty()) {
+        push_timepoint = true;
+      }
+      else {
+        auto& last_timepoint = globals.input_sample_sync_points.time_points.back();
+        if (buff.sample0_index - last_timepoint.sample_index >= Config::input_sample_index_sync_frequency) {
+          push_timepoint = true;
+        }
+      }
+
+      if (push_timepoint) {
+        auto& next_sync_point = globals.input_sample_sync_points.time_points.emplace_back();
+        next_sync_point.sample_index = buff.sample0_index;
+        next_sync_point.elapsed_time = buff.sample0_time;
+      }
+    }
+  }
 }
 
 void ni::terminate_ni() {
@@ -489,6 +524,7 @@ void ni::terminate_ni() {
   globals.sample_buffer_data.clear();
   globals.time0 = {};
   globals.output_pulse_queue.clear();
+  globals.input_sample_sync_points.clear();
   globals.initialized = false;
 }
 
@@ -515,12 +551,19 @@ void ni::release_sample_buffers() {
   }
 }
 
-std::vector<ni::TriggerTimePoint> ni::read_trigger_time_points(om::TimePoint* t0) {
+om::TimePoint ni::read_time0() {
+  return globals.time0;
+}
+
+std::vector<ni::TriggerTimePoint> ni::read_sync_time_points() {
+  return globals.input_sample_sync_points.time_points;
+}
+
+std::vector<ni::TriggerTimePoint> ni::read_trigger_time_points() {
   std::vector<ni::TriggerTimePoint> tps;
   {
     std::lock_guard<std::mutex> lock(globals.ni_trigger_time_point_mutex);
     tps = globals.ni_trigger_detect.time_points.time_points;
-    *t0 = globals.ni_trigger_detect.time_points.time0;
   }
   return tps;
 }
