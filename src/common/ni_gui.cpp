@@ -26,10 +26,12 @@ void om::gui::render_ni_gui(NIGUIData* gui, const ni::SampleBuffer* buffs, int n
     ImGui::TreePop();
   }
 
-  ImPlot::BeginPlot("TriggerChannel");
+  if (ImGui::TreeNode("VoltagePlot")) {
+    ImPlot::BeginPlot("TriggerChannel");
+    ImPlot::PlotLine("Trigger", gui->sample_history.data.data(), gui->sample_history.size);
+    ImPlot::EndPlot();
+    ImGui::TreePop();
+  }
 
-  ImPlot::PlotLine("Trigger", gui->sample_history.data.data(), gui->sample_history.size);
-
-  ImPlot::EndPlot();
   ImGui::End();
 }
