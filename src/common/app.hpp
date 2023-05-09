@@ -10,6 +10,7 @@ struct App {
   virtual ~App() = default;
   virtual void gui_update() {}
   virtual void task_update() {}
+  virtual void always_update() {}
   virtual void setup() {}
   virtual void shutdown() {}
   int run();

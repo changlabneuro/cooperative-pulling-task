@@ -1,5 +1,6 @@
 #include "imgui.hpp"
 #include <imgui.h>
+#include <implot.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <glad/glad.h>
@@ -42,6 +43,8 @@ std::optional<ImguiContext> create_imgui_context(GLFWwindow* window) {
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
+  ImPlot::CreateContext();
+
   ImguiContext result{};
   result.initialized = true;
   return result;
@@ -49,6 +52,7 @@ std::optional<ImguiContext> create_imgui_context(GLFWwindow* window) {
 
 void destroy_imgui_context(ImguiContext* context) {
   if (context->initialized) {
+    ImPlot::DestroyContext();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

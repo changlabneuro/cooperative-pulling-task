@@ -19,9 +19,20 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         deps
         deps/stb
         deps/imgui
+        deps/implot
         deps/glad/include
         deps/serial/include
         deps/json/include)
+
+set(NI_DIR "C:\\Program Files (x86)\\National Instruments\\Shared\\ExternalCompilerSupport\\C")
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    ${NI_DIR}/include
+)
+
+target_link_directories(${PROJECT_NAME} PUBLIC
+    ${NI_DIR}/lib64/msvc
+)
 
 target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/app.hpp
@@ -29,6 +40,11 @@ target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/audio.hpp
         ${CMAKE_SOURCE_DIR}/src/common/audio.cpp
         ${CMAKE_SOURCE_DIR}/src/common/common.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/ni.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/ni.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/ni_gui.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/ni_gui.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/sample_queue.hpp
         ${CMAKE_SOURCE_DIR}/src/common/serial.hpp
         ${CMAKE_SOURCE_DIR}/src/common/serial.cpp
         ${CMAKE_SOURCE_DIR}/src/common/serial_lever.hpp
@@ -69,7 +85,11 @@ target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/deps/imgui/imgui_widgets.cpp
         ${CMAKE_SOURCE_DIR}/deps/imgui/imgui_demo.cpp
         ${CMAKE_SOURCE_DIR}/deps/imgui/backends/imgui_impl_glfw.cpp
-        ${CMAKE_SOURCE_DIR}/deps/imgui/backends/imgui_impl_opengl3.cpp)
+        ${CMAKE_SOURCE_DIR}/deps/imgui/backends/imgui_impl_opengl3.cpp
+
+        #   IMPLOT
+        ${CMAKE_SOURCE_DIR}/deps/implot/implot.cpp
+        ${CMAKE_SOURCE_DIR}/deps/implot/implot_items.cpp)
 
 configure_compiler_flags(${PROJECT_NAME})
 
@@ -85,6 +105,7 @@ add_subdirectory(deps/portaudio)
 target_link_libraries(${PROJECT_NAME} PUBLIC
         glfw
         PortAudio
-        serial)
+        serial
+        NIDAQmx)
 
 add_subdirectory(src/sandbox)

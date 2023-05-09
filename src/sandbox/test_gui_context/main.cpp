@@ -5,11 +5,17 @@
 #include "common/common.hpp"
 #include "common/juice_pump.hpp"
 #include "common/random.hpp"
+#include "common/ni.hpp"
+#include "common/ni_gui.hpp"
 #include "training.hpp"
 #include "nlohmann/json.hpp"
 #include <imgui.h>
+#include <implot.h>
+
+#define INCLUDE_NI (1)
 
 #ifdef _MSC_VER
+#define NOMINMAX
 #include <Windows.h>
 #endif
 
@@ -17,16 +23,26 @@
 #include <thread>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
+
+#include <stdio.h>
 
 using json = nlohmann::json;
+
+using namespace std;
 
 struct App;
 
 void render_gui(App& app);
 void task_update(App& app);
+void always_update(App& app);
 void setup(App& app);
 void shutdown(App& app);
 void do_update_automated_pull(App& app);
+
+struct Config {
+  static constexpr int ni_num_samples_per_channel = 1000;
+};
 
 struct TrialRecord {
   double trial_start_time_stamp;  // time since the session starts
@@ -80,6 +96,9 @@ struct App : public om::App {
   void task_update() override {
     ::task_update(*this);
   }
+  void always_update() override {
+    ::always_update(*this);
+  }
   void shutdown() override {
     ::shutdown(*this);
   }
@@ -88,18 +107,17 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string lever1_animal{ "Scorch" };
-  std::string lever2_animal{ "Kanga" };
+  std::string lever1_animal{ "Kanga" };
+  std::string lever2_animal{ "Sparkle" };
 
-
-  std::string experiment_date{ "20230428" };
+  std::string experiment_date{ "20230509" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
   //std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
   //std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
-  int tasktype{ 3 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
+  int tasktype{ 1 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
 
   // int tasktype{rand()%2}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
   // int tasktype{ rand()%4}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
@@ -152,6 +170,10 @@ struct App : public om::App {
   om::lever::AutomatedPullParams automated_pull_params{};
   bool need_trigger_automated_pulls[2]{};
   om::lever::PullSchedule automated_pull_schedules[2]{};
+
+  om::gui::NIGUIData ni_gui_data{};
+  const om::ni::SampleBuffer* ni_sample_buffers;
+  int num_ni_sample_buffers{};
 
   // initiate auditory cues
   std::optional<om::audio::BufferHandle> debug_audio_buffer;
@@ -270,6 +292,7 @@ json to_json(const std::vector<LeverReadout>& lever_reads) {
   }
   return result;
 }
+
 
 
 void setup(App& app) {
@@ -420,10 +443,6 @@ std::optional<std::string> render_text_input_field(const char* field_name) {
 void render_gui(App& app) {
   const auto enter_flag = ImGuiInputTextFlags_EnterReturnsTrue;
 
-#if 0
-  do_update_automated_pull(app);
-#endif
-
 
   ImGui::Begin("GUI");
   if (ImGui::Button("Refresh ports")) {
@@ -547,6 +566,8 @@ void render_gui(App& app) {
   ImGui::Begin("JuicePump");
   render_juice_pump_gui(app);
   ImGui::End();
+
+  om::gui::render_ni_gui(&app.ni_gui_data, app.ni_sample_buffers, app.num_ni_sample_buffers);
 }
 
 
@@ -616,6 +637,11 @@ int get_automated_lever_enabled_index(const App& app) {
   return 0;
 }
 
+void always_update(App& app) {
+  om::ni::release_sample_buffers();
+  app.num_ni_sample_buffers = om::ni::read_sample_buffers(&app.ni_sample_buffers);
+}
+
 void task_update(App& app) {
   using namespace om;
 
@@ -641,7 +667,6 @@ void task_update(App& app) {
     app.leverpulled[1] = false;
     app.leverpulledtime[0] = 0;
     app.leverpulledtime[1] = 0;
-
 
     // sound to indicate the start of a session
     if (app.trialnumber == 0 && start_session_sound) {
@@ -1043,13 +1068,39 @@ void task_update(App& app) {
   }
 }
 
+bool initialize_ni() {
+  om::ni::InitParams init_params{};
+  om::ni::ChannelDescriptor ai0_desc{};
 
+  ai0_desc.name = "Dev1/ai0";
+  ai0_desc.max_value = 10.0;
+  ai0_desc.min_value = -10.0;
+
+  init_params.sample_rate = 1e4;
+  init_params.sample_clock_channel_name = "/Dev1/PFI0";
+  init_params.num_samples_per_channel = Config::ni_num_samples_per_channel;
+  init_params.num_analog_input_channels = 1;
+  init_params.analog_input_channels = &ai0_desc;
+
+  return om::ni::init_ni(init_params);
+}
 
 int main(int, char**) {
-  srand(time(NULL));
-  auto app = std::make_unique<App>();
-  return app->run();
+#if INCLUDE_NI
+  if (!initialize_ni()) {
+    printf("Failed to initialize NI interface\n");
+    return 0;
+  }
+#endif
 
- 
+  std::srand(time(NULL));
+  auto app = std::make_unique<App>();
+  auto res = app->run();
+
+#if INCLUDE_NI
+  om::ni::terminate_ni();
+#endif
+
+  return res;
 }
 

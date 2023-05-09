@@ -70,6 +70,9 @@ int App::run() {
 
     om::lever::update(lever_sys);
     om::pump::submit_commands();
+
+    always_update();
+
     {
       glfwMakeContextCurrent(gui_win.window);
       om::update_framebuffer_dimensions(&gui_win);
