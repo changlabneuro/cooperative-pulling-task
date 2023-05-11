@@ -1,5 +1,6 @@
 #include "ni.hpp"
 #include "ringbuffer.hpp"
+#include "common.hpp"
 #include <NIDAQmx.h>
 #include <vector>
 #include <cassert>
@@ -13,7 +14,7 @@ using namespace om;
 
 struct Config {
   static constexpr int input_sample_buffer_ring_buffer_capacity = 16;
-  static constexpr uint64_t input_sample_index_sync_frequency = 10000;
+  static constexpr uint64_t input_sample_index_sync_interval = 10000;
 };
 
 struct NIInputSampleSyncPoints {
@@ -411,7 +412,7 @@ void stop_daq() {
   }
 }
 
-bool analog_write(int channel, bool high) {
+bool analog_write(int channel, float v) {
   assert(channel >= 0 && channel < globals.num_analog_output_channels);
   auto& ni_task = globals.ni_analog_output_tasks[channel];
   if (!ni_task.started) {
@@ -419,7 +420,7 @@ bool analog_write(int channel, bool high) {
   }
 
   auto& channel_desc = globals.analog_output_channel_descs[channel];
-  double val = high ? channel_desc.max_value : channel_desc.min_value;
+  double val = clamp(double(v), channel_desc.min_value, channel_desc.max_value);
   int32 status = DAQmxWriteAnalogScalarF64(ni_task.task, false, -1.0, val, nullptr);
   if (status != 0) {
     log_ni_error();
@@ -474,7 +475,7 @@ void ni::update_ni() {
     while (pulse_it != globals.output_pulse_queue.pulses.end()) {
       pulse_it->time_remaining = std::max(0.0, pulse_it->time_remaining - dt);
       if (pulse_it->time_remaining == 0.0) {
-        analog_write(pulse_it->channel, false);
+        analog_write(pulse_it->channel, 0.0f);
         pulse_it = globals.output_pulse_queue.pulses.erase(pulse_it);
       }
       else {
@@ -494,7 +495,7 @@ void ni::update_ni() {
       }
       else {
         auto& last_timepoint = globals.input_sample_sync_points.time_points.back();
-        if (buff.sample0_index - last_timepoint.sample_index >= Config::input_sample_index_sync_frequency) {
+        if (buff.sample0_index - last_timepoint.sample_index >= Config::input_sample_index_sync_interval) {
           push_timepoint = true;
         }
       }
@@ -568,8 +569,8 @@ std::vector<ni::TriggerTimePoint> ni::read_trigger_time_points() {
   return tps;
 }
 
-bool ni::write_analog_pulse(int channel, float for_time) {
-  if (!analog_write(channel, true)) {
+bool ni::write_analog_pulse(int channel, float val, float for_time) {
+  if (!analog_write(channel, val)) {
     return false;
   }
 

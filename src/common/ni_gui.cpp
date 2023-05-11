@@ -14,8 +14,9 @@ void om::gui::render_ni_gui(NIGUIData* gui, const ni::SampleBuffer* buffs, int n
 
   ImGui::Begin("NI");
 
+  ImGui::SliderFloat("PulseVoltage", &gui->led_voltage, 0.25f, 10.0f);
   if (ImGui::Button("TriggerPulse")) {
-    om::ni::write_analog_pulse(0, 0.5f);
+    om::ni::write_analog_pulse(0, gui->led_voltage, 0.5f);
   }
 
   if (ImGui::TreeNode("StartTriggerTimePoints")) {
