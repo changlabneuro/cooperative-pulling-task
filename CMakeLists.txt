@@ -42,6 +42,8 @@ target_sources(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src/common/common.hpp
         ${CMAKE_SOURCE_DIR}/src/common/ni.hpp
         ${CMAKE_SOURCE_DIR}/src/common/ni.cpp
+        ${CMAKE_SOURCE_DIR}/src/common/led.hpp
+        ${CMAKE_SOURCE_DIR}/src/common/led.cpp
         ${CMAKE_SOURCE_DIR}/src/common/ni_gui.hpp
         ${CMAKE_SOURCE_DIR}/src/common/ni_gui.cpp
         ${CMAKE_SOURCE_DIR}/src/common/sample_queue.hpp

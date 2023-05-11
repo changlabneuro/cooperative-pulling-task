@@ -1,9 +1,10 @@
 #include "ni_gui.hpp"
 #include "ni.hpp"
+#include "led.hpp"
 #include <imgui.h>
 #include <implot.h>
 
-void om::gui::render_ni_gui(NIGUIData* gui, const ni::SampleBuffer* buffs, int num_sample_buffs) {
+void om::gui::render_ni_gui(NIGUIData* gui, const ni::SampleBuffer* buffs, int num_sample_buffs, om::led::LEDSync* sync) {
   constexpr int sample_history_size = 5000;
   gui->sample_history.reserve(sample_history_size);
   for (int i = 0; i < num_sample_buffs; i++) {
@@ -14,9 +15,16 @@ void om::gui::render_ni_gui(NIGUIData* gui, const ni::SampleBuffer* buffs, int n
 
   ImGui::Begin("NI");
 
-  ImGui::SliderFloat("PulseVoltage", &gui->led_voltage, 0.25f, 10.0f);
-  if (ImGui::Button("TriggerPulse")) {
-    om::ni::write_analog_pulse(0, gui->led_voltage, 0.5f);
+  if (ImGui::TreeNode("LED")) {
+    ImGui::SliderFloat("PulseVoltage", &sync->pulse_high_voltage, 0.25f, 10.0f);
+    ImGui::SliderFloat("PulseDuration", &sync->pulse_duration_s, 0.25f, 10.0f);
+    ImGui::SliderFloat("PulseInterval", &sync->sync_interval_s, 0.25f, 60.0f);
+
+    if (ImGui::Button("TriggerPulse")) {
+      led::trigger(sync);
+    }
+
+    ImGui::TreePop();
   }
 
   if (ImGui::TreeNode("StartTriggerTimePoints")) {

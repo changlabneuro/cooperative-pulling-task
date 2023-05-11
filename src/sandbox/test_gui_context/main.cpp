@@ -7,6 +7,7 @@
 #include "common/random.hpp"
 #include "common/ni.hpp"
 #include "common/ni_gui.hpp"
+#include "common/led.hpp"
 #include "training.hpp"
 #include "nlohmann/json.hpp"
 #include <imgui.h>
@@ -42,6 +43,7 @@ void do_update_automated_pull(App& app);
 
 struct Config {
   static constexpr int ni_num_samples_per_channel = 1000;
+  static constexpr int led_channel_index = 0;
 };
 
 struct TrialRecord {
@@ -110,14 +112,14 @@ struct App : public om::App {
   std::string lever1_animal{ "Kanga" };
   std::string lever2_animal{ "Sparkle" };
 
-  std::string experiment_date{ "20230509" };
+  std::string experiment_date{ "20230510" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
   //std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
   //std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
-  int tasktype{ 1 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
+  int tasktype{ 3 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
 
   // int tasktype{rand()%2}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
   // int tasktype{ rand()%4}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
@@ -171,6 +173,7 @@ struct App : public om::App {
   bool need_trigger_automated_pulls[2]{};
   om::lever::PullSchedule automated_pull_schedules[2]{};
 
+  om::led::LEDSync led_sync;
   om::gui::NIGUIData ni_gui_data{};
   const om::ni::SampleBuffer* ni_sample_buffers;
   int num_ni_sample_buffers{};
@@ -254,7 +257,7 @@ json to_json(const om::ni::TriggerTimePoint& tp) {
   return result;
 }
 
-json get_ni_json_data(om::TimePoint session_t0) {
+json get_ni_json_data(const om::led::LEDSync* sync, om::TimePoint session_t0) {
   const auto sync_ts = om::ni::read_sync_time_points();
   const auto trigger_ts = om::ni::read_trigger_time_points();
   const auto ni_t0 = om::ni::read_time0();
@@ -281,6 +284,7 @@ json get_ni_json_data(om::TimePoint session_t0) {
   ni_data["session_t0_offset"] = session_offset;
   ni_data["sync_ts"] = json_sync_ts;
   ni_data["trigger_ts"] = json_trigger_ts;
+  ni_data["led_sync_ts"] = sync->sync_time_points;
   return ni_data;
 }
 
@@ -333,7 +337,7 @@ json to_json(const std::vector<LeverReadout>& lever_reads) {
 
 
 void setup(App& app) {
-
+  om::led::initialize(&app.led_sync, om::ni::read_time0(), Config::led_channel_index);
   
   //auto buff_p = std::string{OM_RES_DIR} + "/sounds/piano-c.wav";
   //app.debug_audio_buffer = om::audio::read_buffer(buff_p.c_str());
@@ -432,7 +436,7 @@ void shutdown(App& app) {
     //  ni session data
     std::string ni_session_data_file_path = std::string{ OM_DATA_DIR } + "/" + ni_data_name;
     std::ofstream ni_output_file(ni_session_data_file_path);
-    ni_output_file << get_ni_json_data(app.session_start_time);
+    ni_output_file << get_ni_json_data(&app.led_sync, app.session_start_time);
   }
 }
 
@@ -610,7 +614,7 @@ void render_gui(App& app) {
   render_juice_pump_gui(app);
   ImGui::End();
 
-  om::gui::render_ni_gui(&app.ni_gui_data, app.ni_sample_buffers, app.num_ni_sample_buffers);
+  om::gui::render_ni_gui(&app.ni_gui_data, app.ni_sample_buffers, app.num_ni_sample_buffers, &app.led_sync);
 }
 
 
@@ -683,6 +687,8 @@ int get_automated_lever_enabled_index(const App& app) {
 void always_update(App& app) {
   om::ni::update_ni();
   app.num_ni_sample_buffers = om::ni::read_sample_buffers(&app.ni_sample_buffers);
+
+  om::led::update(&app.led_sync);
 }
 
 void task_update(App& app) {
