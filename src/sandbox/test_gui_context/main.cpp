@@ -109,10 +109,10 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string lever1_animal{ "Kanga" };
   std::string lever2_animal{ "Sparkle" };
+  std::string lever1_animal{ "Kanga" };
 
-  std::string experiment_date{ "20230510" };
+  std::string experiment_date{ "20230512" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
@@ -688,7 +688,7 @@ void always_update(App& app) {
   om::ni::update_ni();
   app.num_ni_sample_buffers = om::ni::read_sample_buffers(&app.ni_sample_buffers);
 
-  om::led::update(&app.led_sync);
+  // om::led::update(&app.led_sync);
 }
 
 void task_update(App& app) {
@@ -700,6 +700,8 @@ void task_update(App& app) {
   static DelayState delay{};
   static InnerDelayState innerdelay{};
   static bool start_session_sound{true};
+
+  om::led::update(&app.led_sync);
 
   //
   // renew for every new trial

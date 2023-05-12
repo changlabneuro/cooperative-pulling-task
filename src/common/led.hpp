@@ -10,10 +10,10 @@ struct LEDSync {
 	bool initialized{};
 	int ni_channel_index{};
 
-	float pulse_duration_s{ 1.0f };
+	float pulse_duration_s{ 0.15f };
 	float pulse_high_voltage{ 3.0f };
 
-	float sync_interval_s{ 30.0f };
+	float sync_interval_s{ 20.0f };
 	std::vector<double> sync_time_points;
 	om::TimePoint last_sync_time{};
 	bool has_last_sync_time{};
