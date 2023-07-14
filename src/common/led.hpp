@@ -10,7 +10,7 @@ struct LEDSync {
 	bool initialized{};
 	int ni_channel_index{};
 
-	float pulse_duration_s{ 0.15f };
+	float pulse_duration_s{ 0.30f };
 	float pulse_high_voltage{ 3.0f };
 
 	float sync_interval_s{ 20.0f };
