@@ -109,17 +109,18 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string lever2_animal{ "Sparkle" };
-  std::string lever1_animal{ "Kanga" };
+  std::string lever1_animal{ "Dodson" };
+  std::string lever2_animal{ "Ginger" };
 
-  std::string experiment_date{ "20230512" };
+  std::string experiment_date{ "20231107" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
   //std::string sessioninfo_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_session_info_1.json";
   //std::string leverread_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_lever_reading_1.json";
 
-  int tasktype{ 3 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
+
+  int tasktype{ 1 }; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training
 
   // int tasktype{rand()%2}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
   // int tasktype{ rand()%4}; // indicate the task type and different cue color: 0 no reward; 1 - self; 2 - altruistic; 3 - cooperative; 4  - for training 
@@ -136,7 +137,8 @@ struct App : public om::App {
   // float lever_position_limits[2]{25e3f, 33e3f};
   // float lever_position_limits[4]{ 64.5e3f, 65e3f, 14e2f, 55e2f}; // lever 1 and lever 2 have different potentiometer ranges - WS 
   // float lever_position_limits[4]{ 63.7e3f, 65.3e3f, 12e2f, 59e2f }; // lever 1 and lever 2 have different potentiometer ranges - WS 
-  float lever_position_limits[4]{ 42.4e3f, 48.2e3f, 12.5e2f, 70e2f }; // lever 1 and lever 2 have different potentiometer ranges - WS 
+  // float lever_position_limits[4]{ 42.4e3f, 48.2e3f, 12.5e2f, 70e2f }; // lever 1 and lever 2 have different potentiometer ranges - WS 
+  float lever_position_limits[4]{ 44.1e3f, 49.7e3f, 14.0e2f, 55e2f }; // lever 1 and lever 2 have different potentiometer ranges - WS 
   bool invert_lever_position[2]{true, false};
   
   //float new_delay_time{2.0f};
@@ -165,7 +167,7 @@ struct App : public om::App {
 
   bool leverpulled[2]{ false, false };
   float leverpulledtime[2]{ 0,0 };  //mostly for the cooperative condition (taskytype = 3)
-  float pulledtime_thres{ 1.5f }; // time difference that two animals has to pull the lever 
+  float pulledtime_thres{ 1.0f }; // time difference that two animals has to pull the lever 
 
   bool automated_pulls_enabled[2]{};
   om::lever::AutomatedPull automated_pulls[2]{};
@@ -372,7 +374,7 @@ void setup(App& app) {
   app.failed_pull_audio_buffer = om::audio::read_buffer(buff_p2.c_str());
 
   // define the threshold of pulling
-  const float dflt_rising_edge = 0.5f;  // 0.6f
+  const float dflt_rising_edge = 0.475f;  // 0.6f
   const float dflt_falling_edge = 0.2f; // 0.25f
   app.detect_pull[0].rising_edge = dflt_rising_edge;
   app.detect_pull[1].rising_edge = dflt_rising_edge;
