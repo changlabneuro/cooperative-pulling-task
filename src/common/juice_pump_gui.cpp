@@ -57,6 +57,7 @@ gui::JuicePumpGUIResult gui::render_juice_pump_gui(const JuicePumpGUIParams& par
       if (canonical_pump_state.connection_open) {
         if (ImGui::Button("Run")) {
           om::pump::run_dispense_program(pump_handle);
+          result.reward_triggered = true;
         }
         if (ImGui::Button("Stop")) {
           om::pump::stop_dispense_program(pump_handle);

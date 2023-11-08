@@ -17,6 +17,7 @@ struct JuicePumpGUIParams {
 
 struct JuicePumpGUIResult {
   std::optional<bool> allow_automated_run;
+  bool reward_triggered;
 };
 
 JuicePumpGUIResult render_juice_pump_gui(const JuicePumpGUIParams& params);
