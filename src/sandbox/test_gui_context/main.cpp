@@ -211,6 +211,7 @@ struct App : public om::App {
   std::vector<BehaviorData> behavior_data;
   std::vector<SessionInfo> session_info;
   std::vector<LeverReadout> lever_readout; // under construction
+  std::vector<double> manual_reward_times;
 
 };
 
@@ -257,6 +258,12 @@ json to_json(const om::ni::TriggerTimePoint& tp) {
   json result;
   result["sample_index"] = tp.sample_index;
   result["elapsed_time"] = tp.elapsed_time;
+  return result;
+}
+
+json get_supp_data(const std::vector<double>& manual_reward_ts) {
+  json result;
+  result["manual_reward_times"] = manual_reward_ts;
   return result;
 }
 
@@ -407,6 +414,7 @@ void shutdown(App& app) {
   std::string sessioninfo_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_session_info_" + postfix + ".json";
   std::string leverread_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_lever_reading_" + postfix + ".json";
   std::string ni_data_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_ni_data_" + postfix + ".json";
+  std::string supp_data_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_supp_data_" + postfix + ".json";
 #endif
 
   if (!app.dont_save_data) {
@@ -441,6 +449,11 @@ void shutdown(App& app) {
     std::string ni_session_data_file_path = std::string{ OM_DATA_DIR } + "/" + ni_data_name;
     std::ofstream ni_output_file(ni_session_data_file_path);
     ni_output_file << get_ni_json_data(&app.led_sync, app.session_start_time);
+
+    //  supplementary data
+    std::string supp_data_fp = std::string{ OM_DATA_DIR } + "/" + supp_data_name;
+    std::ofstream supp_file(supp_data_fp);
+    supp_file << get_supp_data(app.manual_reward_times);
   }
 }
 
@@ -474,6 +487,10 @@ void render_juice_pump_gui(App& app) {
 
   if (res.allow_automated_run) {
     app.allow_automated_juice_delivery = res.allow_automated_run.value();
+  }
+
+  if (res.reward_triggered) {
+    app.manual_reward_times.push_back(om::elapsed_time(app.session_start_time, om::now()));
   }
 }
 
