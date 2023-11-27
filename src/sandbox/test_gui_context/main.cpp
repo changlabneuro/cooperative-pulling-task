@@ -47,7 +47,7 @@ struct Config {
 };
 
 struct TrialRecord {
-  double trial_start_time_stamp;  // time since the session starts
+  double trial_start_time_stamp;  // time since the session starts (first pull)
   int trial_number;
   int first_pull_id;
   int rewarded;
@@ -70,6 +70,7 @@ struct SessionInfo {
   float high_force;
   int task_type;
   float pulltime_thres;
+  double first_pull_time;  // time since the session starts (first pull), same as TrialRecord -  trial_start_time_stamp
 };
 
 struct LeverReadout {
@@ -109,10 +110,10 @@ struct App : public om::App {
   // Some of these variable can be changed accordingly for each session. - Weikang
 
   // file name
-  std::string lever1_animal{ "Dodson" };
-  std::string lever2_animal{ "Ginger" };
+  std::string lever1_animal{ "Ginger" };
+  std::string lever2_animal{ "Dodson" };
 
-  std::string experiment_date{ "20231107" };
+  std::string experiment_date{ "20231128" };
 
   //std::string trialrecords_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_TrialRecord_1.json" ;
   //std::string bhvdata_name = experiment_date + "_" + lever1_animal + "_" + lever2_animal + "_bhv_data_1.json" ;
@@ -301,6 +302,7 @@ json to_json(const SessionInfo& session_info) {
   result["experiment_date"] = session_info.experiment_date;
   result["task_type"] = session_info.task_type;
   result["pulltime_thres"] = session_info.pulltime_thres;
+  result["first_pull_time"] = session_info.first_pull_time;
   return result;
 }
 
@@ -774,6 +776,19 @@ void task_update(App& app) {
           time_stamps.time_points = app.timepoint;
           time_stamps.behavior_events = app.behavior_event;
           app.behavior_data.push_back(time_stamps);
+
+          // update session info
+          // save some task information into session_info
+          SessionInfo session_info{};
+          session_info.lever1_animal = app.lever1_animal;
+          session_info.lever2_animal = app.lever2_animal;
+          session_info.high_force = app.releaseforce;
+          session_info.init_force = app.normalforce;
+          session_info.experiment_date = app.experiment_date;
+          session_info.task_type = app.tasktype;
+          session_info.pulltime_thres = app.pulledtime_thres;
+          session_info.first_pull_time = app.trial_start_time_forsave;
+          app.session_info.push_back(session_info);
         }
 
         // save some behavioral events data
