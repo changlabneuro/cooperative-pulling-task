@@ -40,6 +40,7 @@ void always_update(App& app);
 void setup(App& app);
 void shutdown(App& app);
 void do_update_automated_pull(App& app);
+void ensure_some_trial_records_are_stored(App& app);
 
 struct Config {
   static constexpr int ni_num_samples_per_channel = 1000;
@@ -400,7 +401,7 @@ void setup(App& app) {
 }
 
 void shutdown(App& app) {
-  (void)app;
+  ensure_some_trial_records_are_stored(app);
 
 #if 0
   std::string trialrecords_name = app.experiment_date + "_" + app.lever1_animal + "_" + app.lever2_animal + "_TrialRecord_1.json";
@@ -1150,6 +1151,21 @@ void task_update(App& app) {
     default: {
       assert(false);
     }
+  }
+}
+
+void ensure_some_trial_records_are_stored(App& app) {
+  if (app.trial_records.empty()) {
+    TrialRecord trial_record{};
+    trial_record.trial_number = app.trialnumber;
+    trial_record.first_pull_id = app.first_pull_id;
+    trial_record.rewarded = app.rewarded[0] + app.rewarded[1];
+    trial_record.task_type = app.tasktype;
+    trial_record.automated_lever_enabled_index = get_automated_lever_enabled_index(app);
+    trial_record.trial_start_time_stamp = app.trial_start_time_forsave;
+    trial_record.pulltime_thres = app.pulledtime_thres;
+    //  Add to the array of trials.
+    app.trial_records.push_back(trial_record);
   }
 }
 
