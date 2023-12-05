@@ -977,6 +977,19 @@ void task_update(App& app) {
             //time_stamps3.behavior_events = app.behavior_event;
             //app.behavior_data.push_back(time_stamps3);
 
+            // update session info
+            // save some task information into session_info
+            SessionInfo session_info{};
+            session_info.lever1_animal = app.lever1_animal;
+            session_info.lever2_animal = app.lever2_animal;
+            session_info.high_force = app.releaseforce;
+            session_info.init_force = app.normalforce;
+            session_info.experiment_date = app.experiment_date;
+            session_info.task_type = app.tasktype;
+            session_info.pulltime_thres = app.pulledtime_thres;
+            session_info.first_pull_time = app.trial_start_time_forsave;
+            app.session_info.push_back(session_info);
+
 
 
           }
